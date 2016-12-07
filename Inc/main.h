@@ -59,7 +59,7 @@ extern u32 time_ms;
 
 extern u8 config;
 #define TIME_MS (1<<0)
-
+#define BIT(x)  (1<<x)
 /* USER CODE END Private defines */
 
 /**

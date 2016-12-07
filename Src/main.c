@@ -44,6 +44,7 @@
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "usb_device.h"
+#include "step.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -64,7 +65,7 @@ UART_HandleTypeDef huart1;
 /* Private variables ---------------------------------------------------------*/
 u32 time_ms;
 u8 config;
-#define BIT(x)  (1<<x)
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -93,8 +94,6 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-  u8 dir_state;
-  u8 step_state;
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -126,39 +125,25 @@ int main(void)
   HAL_GPIO_WritePin(GPIOB,BIT(1),GPIO_PIN_SET);
 
   time_ms = uwTick;
-  dir_state = 0;
-  step_state = 0;
   HAL_GPIO_WritePin(GPIOA,BIT(7),GPIO_PIN_RESET);
   HAL_GPIO_WritePin(GPIOA,BIT(6),GPIO_PIN_RESET);
   config = 0;
   HAL_IWDG_Start(&hiwdg);
+  motor_init(GPIOB,8,9,&motor_one);
+  motor_init(GPIOB,10,11,&motor_two);
+ // start_rotate(0,0xffffffff,&motor_one);
+ // start_rotate(0,0xffffffff,&motor_two);
   while (1){
     HAL_IWDG_Refresh(&hiwdg);
     if (uwTick > (time_ms+10000)){
       time_ms = uwTick;
-      if (dir_state ==0){
-        HAL_GPIO_WritePin(GPIOB,BIT(8),GPIO_PIN_SET);
-        HAL_GPIO_WritePin(GPIOB,BIT(10),GPIO_PIN_SET);
-        dir_state = 1;
-      }else{
-        HAL_GPIO_WritePin(GPIOB,BIT(8),GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOB,BIT(10),GPIO_PIN_RESET);
-        dir_state = 0;
-      }
+      change_rotate(0xffffffff,&motor_one);
+      change_rotate(0xffffffff,&motor_two);
     }
     if (config & TIME_MS){
       config &=~TIME_MS;
-      if(uwTick&0x00000001){
-        if (step_state ==0){
-          HAL_GPIO_WritePin(GPIOB,BIT(9),GPIO_PIN_SET);
-          HAL_GPIO_WritePin(GPIOB,BIT(11),GPIO_PIN_SET);
-          step_state = 1;
-        }else{
-          HAL_GPIO_WritePin(GPIOB,BIT(9),GPIO_PIN_RESET);
-          HAL_GPIO_WritePin(GPIOB,BIT(11),GPIO_PIN_RESET);
-          step_state = 0;
-        }
-      }
+      step_motor_control(&motor_one);
+      step_motor_control(&motor_two);
     }
     
   /* USER CODE END WHILE */
