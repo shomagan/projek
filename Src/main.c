@@ -65,7 +65,8 @@ UART_HandleTypeDef huart1;
 /* Private variables ---------------------------------------------------------*/
 u32 time_ms;
 u8 config;
-
+RTC_TimeTypeDef Time;
+RTC_DateTypeDef Date;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -125,20 +126,31 @@ int main(void)
   HAL_GPIO_WritePin(GPIOB,BIT(1),GPIO_PIN_SET);
 
   time_ms = uwTick;
-  HAL_GPIO_WritePin(GPIOA,BIT(7),GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOA,BIT(6),GPIO_PIN_RESET);
   config = 0;
   HAL_IWDG_Start(&hiwdg);
-  motor_init(GPIOB,8,9,&motor_one);
-  motor_init(GPIOB,10,11,&motor_two);
+  motor_init(GPIOB,8,9,12,&motor_two);
+  motor_init(GPIOB,10,11,13,&motor_one);
  // start_rotate(0,0xffffffff,&motor_one);
  // start_rotate(0,0xffffffff,&motor_two);
   while (1){
+    u8 opt_state;
     HAL_IWDG_Refresh(&hiwdg);
-    if (uwTick > (time_ms+10000)){
+    if (uwTick > (time_ms+2000)){
       time_ms = uwTick;
-      change_rotate(0xffffffff,&motor_one);
-      change_rotate(0xffffffff,&motor_two);
+      if (motor_one.dir_state!=0){
+        stop_rotate(&motor_two);
+        for (u16 c=0;c<1000;c++){
+          c=c;
+        }
+        start_rotate(0,0xffffffff,&motor_one);
+      }else{
+        stop_rotate(&motor_one);
+        for (u16 c=0;c<1000;c++){
+          c=c;
+        }
+
+        start_rotate(1,0xffffffff,&motor_two);
+      }
     }
     if (config & TIME_MS){
       config &=~TIME_MS;
@@ -146,6 +158,23 @@ int main(void)
       step_motor_control(&motor_two);
     }
     
+    if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_5)){
+      opt_state |=0x01;
+    }else{
+      opt_state &=~0x01;
+    }
+    if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_6)){
+      opt_state |=0x02;
+    }else{
+      opt_state &=~0x02;
+    }
+    if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_7)){
+      opt_state |=0x04;
+    }else{
+      opt_state &=~0x04;
+    }
+    HAL_RTC_GetTime(&hrtc, &Time, RTC_FORMAT_BCD);
+    HAL_RTC_GetDate(&hrtc, &Date, RTC_FORMAT_BCD);
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
@@ -166,9 +195,11 @@ void SystemClock_Config(void)
 
     /**Initializes the CPU, AHB and APB busses clocks 
     */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE
+															|RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -195,7 +226,7 @@ void SystemClock_Config(void)
 
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_ADC
                               |RCC_PERIPHCLK_USB;
-  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
   PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
   PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
@@ -267,6 +298,10 @@ static void MX_RTC_Init(void)
 
   RTC_TimeTypeDef sTime;
   RTC_DateTypeDef DateToUpdate;
+
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_RCC_BKP_CLK_ENABLE();
+  HAL_PWR_EnableBkUpAccess();
 
     /**Initialize RTC Only 
     */
@@ -400,44 +435,41 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+	__HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pin : PA5 */
+  /*Configure GPIO pin : PA5,PA6,PA7 */
   GPIO_InitStruct.Pin = GPIO_PIN_5;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PA4 PA6 PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_6|GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Pin = GPIO_PIN_6;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  GPIO_InitStruct.Pin = GPIO_PIN_7;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  
   /*Configure GPIO pins : PB8 dir motor 2
                           PB9 step motor 2
+                          PB12 enable low is active
                           PB10 dir motor 1 
-                          PB11 step motor 1*/
-  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11;
+                          PB11 step motor 1
+                          PB13 enable low is active
+                          PB14 pin reset 
+                          */
+  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Pb0 Pb1*/
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB2 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-  HAL_GPIO_WritePin(GPIOA, BIT(4)|BIT(6)|BIT(7), GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOB, BIT(8)|BIT(9)|BIT(10)|BIT(11), GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOB, BIT(0)|BIT(1), GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, BIT(8)|BIT(9)|BIT(10)|BIT(11), GPIO_PIN_RESET);//dir step 
+  HAL_GPIO_WritePin(GPIOB, BIT(12)|BIT(13), GPIO_PIN_RESET);//enable is active
+  HAL_GPIO_WritePin(GPIOB, BIT(14), GPIO_PIN_SET);//pin reset disable
 }
 
 /* USER CODE BEGIN 4 */
