@@ -1,0 +1,69 @@
+#:kivy 1.9.1
+
+<MapBall>:
+  size: 50, 50
+  rgb: 0.3, 0, 0.3,
+  canvas:
+    Color:
+      rgb: self.rgb
+    Ellipse:
+      pos: self.pos
+      size: self.size
+
+<MapImage>:
+  Image:
+    source: 'images/map640_480.png'
+    size:  640,480
+
+
+<KP>:
+  kp_number:1
+  canvas:
+    Color:
+      rgba: .8, .1, .1, .9
+    Line:
+      width: 2.
+      circle:
+        (self.center_x, self.center_y, min(20, 20), 0, 360)
+<KP_Label>:
+  Label:
+    rgb:.1,.5,.1
+    font_size: 15
+    center: root.width*3 / 4
+    text: '1'
+
+
+
+
+
+<MapGame>:
+  # size: image.size
+  # each time a picture is created, the image can delay the loading
+  # as soon as the image is loaded, ensure that the center is changed
+  # to the center of the screen.
+  runner:pong_runner
+#  on_size: self.center = win.Window.center
+  o_map:image
+ # size:self.size
+  size_hint: None,None
+
+  # create initial image to be 400 pixels width
+  MapImage:
+    id: image
+  MapBall:
+    id:pong_runner
+    center_x:self.parent.center_x/2
+    center_y:self.parent.center_y/2
+  Label:
+    color:.1,.1,.6
+    font_size: 15
+    center_x: root.width / 4
+    top: root.top - 50
+    text: "velocity "+ '%1.2f' % root.runner.velocity_volume
+
+  Label:
+    color:.1,.5,.1
+    font_size: 15
+    center_x: root.width*3 / 4
+    top: root.top - 50
+    text: 'time '+ '%3.2f' % root.o_map.timer
