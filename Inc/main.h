@@ -44,7 +44,6 @@
 #ifndef __MAIN_H
 #define __MAIN_H
   /* Includes ------------------------------------------------------------------*/
-
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
@@ -52,14 +51,37 @@
 /* Private define ------------------------------------------------------------*/
 
 /* USER CODE BEGIN Private defines */
+#define TIME_MS (1<<0)
+#define BIT(x)  (1<<x)
+#define OPT_ONE GPIO_PIN_5
+#define OPT_TWO GPIO_PIN_6
+#define OPT_THREE GPIO_PIN_7
+
 typedef unsigned long u32;
 typedef unsigned short u16;
 typedef unsigned char u8;
 extern u32 time_ms;
+typedef union{
+	struct __attribute__((packed)){
+    u16 state;
+#define INIT_STATE 1    
+#define WORK_STATE 2    
+    u16 init_state;
+#define SEARCH_START  BIT(0)
+#define CHECK_FRAME  BIT(1)
+#define START_POSITON  BIT(2)
+#define STARTED  BIT(3)
+#define END_POSITON  BIT(4)
+    
+    u16 frame_finded;
+    u16 stop_time;  //current time in sec
+  } vars;
+	u8 Bytes[1024];
+  u16 Words[512];
+}  settings_t;
+extern settings_t settings;
 
 extern u8 config;
-#define TIME_MS (1<<0)
-#define BIT(x)  (1<<x)
 /* USER CODE END Private defines */
 
 /**

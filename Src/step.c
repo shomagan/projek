@@ -6,6 +6,8 @@ motor_template motor_two;
 
 
 u8 motor_init(GPIO_TypeDef* gpio,u8 pin_dir,u8 pin_step,u8 pin_sleep,motor_template* motor){
+  
+  motor->awaik  =1;
   motor->gpio = gpio;
   motor->pin_dir = pin_dir;
   motor->pin_step = pin_step;
@@ -54,22 +56,29 @@ u8 stop_rotate(motor_template* motor){
   motor->dir_state= 2;//stop
   HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_sleep),GPIO_PIN_RESET);
 }
+u8 suspend_rotate(motor_template* motor){
+  motor->awaik =0;
+}
+u8 awaik_rotate(motor_template* motor){
+  motor->awaik =1;
+}
+
 u8 step_motor_control(motor_template* motor){
 /*  u16 aqsel_time;
   u8 dir_state;
   u8 step_state;*/
   u32 mask;
   HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_step),GPIO_PIN_RESET);
-  if(motor->step_number){
+  if((motor->step_number)&&(motor->awaik)){
     if(uwTick & 0x01){
       if (motor->step_state ==0){
+        motor->step_number--;
         HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_step),GPIO_PIN_SET);
         motor->step_state =1;
       }else{
         motor->step_state =0;
       }
     }
-    motor->step_number--;
   }else{
     HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_step),GPIO_PIN_RESET);
   }

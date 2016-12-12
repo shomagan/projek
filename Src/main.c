@@ -45,6 +45,9 @@
 #include "stm32f1xx_hal.h"
 #include "usb_device.h"
 #include "step.h"
+#include "saver.h"
+#include "frame_control.h"
+
 
 /* USER CODE BEGIN Includes */
 
@@ -67,6 +70,7 @@ u32 time_ms;
 u8 config;
 RTC_TimeTypeDef Time;
 RTC_DateTypeDef Date;
+settings_t settings;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -132,49 +136,37 @@ int main(void)
   motor_init(GPIOB,10,11,13,&motor_one);
  // start_rotate(0,0xffffffff,&motor_one);
  // start_rotate(0,0xffffffff,&motor_two);
-  while (1){
-    u8 opt_state;
-    HAL_IWDG_Refresh(&hiwdg);
-    if (uwTick > (time_ms+2000)){
-      time_ms = uwTick;
-      if (motor_one.dir_state!=0){
-        stop_rotate(&motor_two);
-        for (u16 c=0;c<1000;c++){
-          c=c;
-        }
-        start_rotate(0,0xffffffff,&motor_one);
-      }else{
-        stop_rotate(&motor_one);
-        for (u16 c=0;c<1000;c++){
-          c=c;
-        }
+  /*for (u16 i =0;i<FLASH_SIZE_PAGE/2;i++){
+    u16* pTemp;
+    pTemp = (u16*)(WRITABLE_FLASH_PAGE+i*2);
+    settings.Words[i] = *pTemp;
+  }
 
-        start_rotate(1,0xffffffff,&motor_two);
-      }
-    }
+  for (u16 i =0;i<FLASH_SIZE_PAGE/2;i++){
+    settings.Words[i] = i;
+  }
+  HAL_FLASH_OB_Unlock();
+  HAL_FLASH_Unlock();
+  FLASH_ErasePage(WRITABLE_FLASH_PAGE);
+  for (u16 i =0;i<FLASH_SIZE_PAGE/2;i++){
+    flash_program_u16(WRITABLE_FLASH_PAGE+i*2, settings.Words[i]);
+  }
+  */
+  frame_init();
+  
+  while (1){
+    HAL_IWDG_Refresh(&hiwdg);
+    frame_control_hadler();
     if (config & TIME_MS){
       config &=~TIME_MS;
       step_motor_control(&motor_one);
       step_motor_control(&motor_two);
     }
     
-    if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_5)){
-      opt_state |=0x01;
-    }else{
-      opt_state &=~0x01;
-    }
-    if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_6)){
-      opt_state |=0x02;
-    }else{
-      opt_state &=~0x02;
-    }
-    if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_7)){
-      opt_state |=0x04;
-    }else{
-      opt_state &=~0x04;
-    }
     HAL_RTC_GetTime(&hrtc, &Time, RTC_FORMAT_BCD);
     HAL_RTC_GetDate(&hrtc, &Date, RTC_FORMAT_BCD);
+
+      
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
