@@ -34,6 +34,10 @@
 #include "stm32f1xx_hal.h"
 #include "stm32f1xx.h"
 #include "stm32f1xx_it.h"
+#include "main.h"
+#include "usb_device.h"
+#include "usbd_cdc_if.h"
+
 
 /* USER CODE BEGIN 0 */
 
@@ -205,8 +209,8 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
 
   /* USER CODE END USB_LP_CAN1_RX0_IRQn 0 */
   HAL_PCD_IRQHandler(&hpcd_USB_FS);
+  lenta++;
   /* USER CODE BEGIN USB_LP_CAN1_RX0_IRQn 1 */
-
   /* USER CODE END USB_LP_CAN1_RX0_IRQn 1 */
 }
 

@@ -66,6 +66,7 @@
   * @{
   */ 
 /* USER CODE BEGIN EXPORTED_DEFINES */
+   extern uint8_t UserRxBufferFS[];
 /* USER CODE END EXPORTED_DEFINES */
 
 /**

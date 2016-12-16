@@ -57,10 +57,12 @@
 #define OPT_TWO GPIO_PIN_6
 #define OPT_THREE GPIO_PIN_7
 
-typedef unsigned long u32;
+typedef unsigned int u32;
 typedef unsigned short u16;
 typedef unsigned char u8;
+typedef unsigned const char uc8;
 extern u32 time_ms;
+
 typedef union{
 	struct __attribute__((packed)){
     u16 state;
@@ -80,6 +82,8 @@ typedef union{
   u16 Words[512];
 }  settings_t;
 extern settings_t settings;
+extern u8 buff_temp[256];
+extern u32 lenta;
 
 extern u8 config;
 /* USER CODE END Private defines */

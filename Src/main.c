@@ -44,9 +44,11 @@
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "usb_device.h"
+#include "usbd_cdc_if.h"
 #include "step.h"
 #include "saver.h"
 #include "frame_control.h"
+#include "data_transfer.h"
 
 
 /* USER CODE BEGIN Includes */
@@ -71,6 +73,9 @@ u8 config;
 RTC_TimeTypeDef Time;
 RTC_DateTypeDef Date;
 settings_t settings;
+u8 buff_temp[256];
+u32 lenta;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -153,6 +158,11 @@ int main(void)
   }
   */
   frame_init();
+  u32 timer;
+  timer = uwTick;
+  u8 buff_send[] = {'h','e','l','l','o','_','w','o','r','d'};
+  lenta = 1;
+  
   
   while (1){
     HAL_IWDG_Refresh(&hiwdg);
@@ -162,7 +172,18 @@ int main(void)
       step_motor_control(&motor_one);
       step_motor_control(&motor_two);
     }
-    
+
+    if(uwTick>(timer+5000)){
+      u32* p;
+      timer = uwTick;
+      //if(check_crc16(buff_temp, lenta)){
+        p = (u32*)&UserRxBufferFS[21];
+        *p = lenta;
+        CDC_Transmit_FS(UserRxBufferFS, 25);
+      //}
+      
+    }
+
     HAL_RTC_GetTime(&hrtc, &Time, RTC_FORMAT_BCD);
     HAL_RTC_GetDate(&hrtc, &Date, RTC_FORMAT_BCD);
 
