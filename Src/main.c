@@ -139,31 +139,10 @@ int main(void)
   HAL_IWDG_Start(&hiwdg);
   motor_init(GPIOB,8,9,12,&motor_two);
   motor_init(GPIOB,10,11,13,&motor_one);
- // start_rotate(0,0xffffffff,&motor_one);
- // start_rotate(0,0xffffffff,&motor_two);
-  /*for (u16 i =0;i<FLASH_SIZE_PAGE/2;i++){
-    u16* pTemp;
-    pTemp = (u16*)(WRITABLE_FLASH_PAGE+i*2);
-    settings.Words[i] = *pTemp;
-  }
-
-  for (u16 i =0;i<FLASH_SIZE_PAGE/2;i++){
-    settings.Words[i] = i;
-  }
-  HAL_FLASH_OB_Unlock();
-  HAL_FLASH_Unlock();
-  FLASH_ErasePage(WRITABLE_FLASH_PAGE);
-  for (u16 i =0;i<FLASH_SIZE_PAGE/2;i++){
-    flash_program_u16(WRITABLE_FLASH_PAGE+i*2, settings.Words[i]);
-  }
-  */
   frame_init();
   u32 timer;
   timer = uwTick;
-  u8 buff_send[] = {'h','e','l','l','o','_','w','o','r','d'};
   lenta = 1;
-  
-  
   while (1){
     HAL_IWDG_Refresh(&hiwdg);
     frame_control_hadler();
@@ -173,34 +152,22 @@ int main(void)
       step_motor_control(&motor_two);
     }
 
-    if(uwTick>(timer+5000)){
-      u32* p;
+    if(uwTick>(timer+1000)){
       timer = uwTick;
-      //if(check_crc16(buff_temp, lenta)){
-        p = (u32*)&UserRxBufferFS[21];
-        *p = lenta;
-        CDC_Transmit_FS(UserRxBufferFS, 25);
-      //}
-      
     }
-
+    if (settings.vars.usb_tranceiver_state & USB_RECIVE_OR_TRANSMIT_PACKET){
+      //change_rotate(800,&motor_two);
+      settings.vars.usb_tranceiver_state &= ~USB_RECIVE_OR_TRANSMIT_PACKET;
+      receive_packet_hanling(UserRxBufferFS);
+    }
     HAL_RTC_GetTime(&hrtc, &Time, RTC_FORMAT_BCD);
     HAL_RTC_GetDate(&hrtc, &Date, RTC_FORMAT_BCD);
-
-      
-  /* USER CODE END WHILE */
-
-  /* USER CODE BEGIN 3 */
-
   }
-  /* USER CODE END 3 */
-
 }
 
 /** System Clock Configuration
 */
-void SystemClock_Config(void)
-{
+void SystemClock_Config(void){
 
   RCC_OscInitTypeDef RCC_OscInitStruct;
   RCC_ClkInitTypeDef RCC_ClkInitStruct;
@@ -218,8 +185,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK){
     Error_Handler();
   }
 
@@ -232,8 +198,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV4;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
-  {
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK){
     Error_Handler();
   }
 
@@ -242,8 +207,7 @@ void SystemClock_Config(void)
   PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
   PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
   PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-  {
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK){
     Error_Handler();
   }
 
@@ -260,8 +224,7 @@ void SystemClock_Config(void)
 }
 
 /* ADC2 init function */
-static void MX_ADC2_Init(void)
-{
+static void MX_ADC2_Init(void){
 
   ADC_ChannelConfTypeDef sConfig;
 
@@ -274,8 +237,7 @@ static void MX_ADC2_Init(void)
   hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc2.Init.NbrOfConversion = 1;
-  if (HAL_ADC_Init(&hadc2) != HAL_OK)
-  {
+  if (HAL_ADC_Init(&hadc2) != HAL_OK){
     Error_Handler();
   }
 
@@ -284,8 +246,7 @@ static void MX_ADC2_Init(void)
   sConfig.Channel = ADC_CHANNEL_1;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
-  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
-  {
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK){
     Error_Handler();
   }
 
@@ -306,9 +267,7 @@ static void MX_IWDG_Init(void)
 }
 
 /* RTC init function */
-static void MX_RTC_Init(void)
-{
-
+static void MX_RTC_Init(void){
   RTC_TimeTypeDef sTime;
   RTC_DateTypeDef DateToUpdate;
 
@@ -321,37 +280,44 @@ static void MX_RTC_Init(void)
   hrtc.Instance = RTC;
   hrtc.Init.AsynchPrediv = RTC_AUTO_1_SECOND;
   hrtc.Init.OutPut = RTC_OUTPUTSOURCE_ALARM;
-  if (HAL_RTC_Init(&hrtc) != HAL_OK)
-  {
+  if (HAL_RTC_Init(&hrtc) != HAL_OK){
     Error_Handler();
   }
-
     /**Initialize RTC and set the Time and Date 
     */
-  sTime.Hours = 0x1;
-  sTime.Minutes = 0x0;
-  sTime.Seconds = 0x0;
-
-  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
-  {
-    Error_Handler();
+  if(HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BCD)!= HAL_OK){
+    sTime.Hours = 0x1;
+    sTime.Minutes = 0x0;
+    sTime.Seconds = 0x0;
+    if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK){
+      Error_Handler();
+    }
   }
+  BKP->DR1 = sTime.Hours;
+  BKP->DR2 = sTime.Minutes;
+  BKP->DR3 = sTime.Seconds;
+  
 
-  DateToUpdate.WeekDay = RTC_WEEKDAY_MONDAY;
-  DateToUpdate.Month = RTC_MONTH_JANUARY;
-  DateToUpdate.Date = 0x1;
-  DateToUpdate.Year = 0x0;
-
-  if (HAL_RTC_SetDate(&hrtc, &DateToUpdate, RTC_FORMAT_BCD) != HAL_OK)
-  {
-    Error_Handler();
+  if(HAL_RTC_GetDate(&hrtc, &DateToUpdate, RTC_FORMAT_BCD)!=HAL_OK){
+    DateToUpdate.WeekDay = RTC_WEEKDAY_MONDAY;
+    DateToUpdate.Month = RTC_MONTH_JANUARY;
+    DateToUpdate.Date = 0x1;
+    DateToUpdate.Year = 0x0;
+    if (HAL_RTC_SetDate(&hrtc, &DateToUpdate, RTC_FORMAT_BCD) != HAL_OK)
+    {
+      Error_Handler();
+    }
   }
+  BKP->DR4  = DateToUpdate.WeekDay ;
+  BKP->DR5  = DateToUpdate.Month ;
+  BKP->DR6  = DateToUpdate.Date ;
+  BKP->DR7  = DateToUpdate.Year ;
+  
 
 }
 
 /* TIM1 init function */
-static void MX_TIM1_Init(void)
-{
+static void MX_TIM1_Init(void){
 
   TIM_ClockConfigTypeDef sClockSourceConfig;
   TIM_MasterConfigTypeDef sMasterConfig;
@@ -364,26 +330,22 @@ static void MX_TIM1_Init(void)
   htim1.Init.Period = 0;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
-  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
-  {
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK){
     Error_Handler();
   }
 
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
-  {
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK){
     Error_Handler();
   }
 
-  if (HAL_TIM_OC_Init(&htim1) != HAL_OK)
-  {
+  if (HAL_TIM_OC_Init(&htim1) != HAL_OK){
     Error_Handler();
   }
 
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
-  {
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK){
     Error_Handler();
   }
 
@@ -394,8 +356,7 @@ static void MX_TIM1_Init(void)
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_OC_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
+  if (HAL_TIM_OC_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK){
     Error_Handler();
   }
 
@@ -406,8 +367,7 @@ static void MX_TIM1_Init(void)
   sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
   sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
   sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
-  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
-  {
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK){
     Error_Handler();
   }
 
@@ -416,8 +376,7 @@ static void MX_TIM1_Init(void)
 }
 
 /* USART1 init function */
-static void MX_USART1_UART_Init(void)
-{
+static void MX_USART1_UART_Init(void){
 
   huart1.Instance = USART1;
   huart1.Init.BaudRate = 115200;
@@ -427,8 +386,7 @@ static void MX_USART1_UART_Init(void)
   huart1.Init.Mode = UART_MODE_TX_RX;
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
+  if (HAL_UART_Init(&huart1) != HAL_OK){
     Error_Handler();
   }
 
@@ -498,8 +456,8 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler */
   /* User can add his own implementation to report the HAL error return state */
-  while(1) 
-  {
+  BKP->DR7++;
+  while(1){
   }
   /* USER CODE END Error_Handler */ 
 }
@@ -515,6 +473,7 @@ void Error_Handler(void)
    */
 void assert_failed(uint8_t* file, uint32_t line)
 {
+  BKP->DR8++;
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

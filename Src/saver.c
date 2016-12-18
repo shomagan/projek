@@ -1,4 +1,5 @@
 #include "saver.h"
+#include "data_transfer.h"
 
 
 HAL_StatusTypeDef save_settings(){
@@ -47,6 +48,38 @@ HAL_StatusTypeDef flash_program_u16(uint32_t Address, uint16_t Data){
   }         
   /* Return the Program Status */
   return status;
+}
+u8 init_frame_struct(u16 frame_number){
+  u16* p_struct;
+  u16* p_flash;
+  p_struct = (u16*)&settings.vars.frame_number_saved;
+  for (u16 i =0;i<474;i++){
+    p_flash = (u16*)(WRITABLE_FLASH_PAGE+i*2);
+    p_struct[i] = *p_flash;
+  }
+  if (check_crc16((u8*)p_struct,948)&&(frame_number==settings.vars.frame_number_saved)){
+    
+  }else{
+    settings.vars.frame_number_saved = frame_number;
+    for (u16 i=0;i<118;i++){
+      if (i<frame_number){
+        settings.vars.frame[i].option = 0;
+        settings.vars.frame[i].time = 15;
+        settings.vars.frame[i].reserve = 0;
+      }else{
+        settings.vars.frame[i].option = 0;
+        settings.vars.frame[i].time = 15;
+        settings.vars.frame[i].reserve = 0;
+      }
+    }
+    settings.vars.crc16 = crc16((u8*)p_struct,946);
+    HAL_FLASH_OB_Unlock();
+    HAL_FLASH_Unlock();
+    FLASH_ErasePage(WRITABLE_FLASH_PAGE);
+    for (u16 i =0;i<474;i++){
+      flash_program_u16(WRITABLE_FLASH_PAGE+i*2, p_struct[i]);
+    }
+  }
 }
 
 

@@ -1,8 +1,5 @@
 #include "stm32f1xx_hal.h"
 #include "main.h"
-#define TO_RIGHT 0 
-#define TO_LEFT  1 
-#define STOP     2
 #define DRIVER_SLEEP 0
 #define DRIVER_AWAIKE 1
 typedef struct {
@@ -15,6 +12,7 @@ typedef struct {
   u8 pin_dir;
   u8 pin_step;
   u8 pin_sleep;//low is active
+  u16 tick_from_start;  //tick in step motor from last start
 } motor_template;
 
 u8 motor_init(GPIO_TypeDef* gpio,u8 pin_dir,u8 pin_step,u8 pin_sleep,motor_template* motor);

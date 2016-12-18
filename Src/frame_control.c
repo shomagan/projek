@@ -8,119 +8,177 @@
 #define OPT_THREE GPIO_PIN_7
 */
 static u8 opt_old;
-  
+static u8 opt;  
+static u16 shift_step;  
+#define LEFT_PARA 0x01
+#define MIDLE_PARA 0x02
+#define RIGHT_PARA 0x04
+#define STRETCH_STEP 25
+#define MAX_MAIN_STEP 1200
+u8 rising_only_opt(u8 para_number);
+u8 rising_opt(u8 para_number);
+u8 rising_midle_opt_after_left();
+u8 rising_midle_opt_after_right();
+u8 rising_left_after_two_right();
+u8 rising_right_after_two_left();
+u8 rising_full();
+u8 move_to_left(u16 step);
+u8 move_to_right(u16 step);
+u8 stretch(u16 step);
+u8 stop_move();
+u8 break_to_init();
+
+
 u8 frame_init(void){
   settings.vars.state = INIT_STATE;
   settings.vars.init_state = SEARCH_START;
   settings.vars.frame_finded = 0;
   settings.vars.stop_time =0;
   opt_old = 0;
-  
 }
 u8 frame_control_hadler(void){
   static u32 time_stoped;
-  u8 opt;
   opt = get_opt_mask();
   if (!settings.vars.stop_time){
     switch(settings.vars.state){
         case INIT_STATE:
           if (settings.vars.init_state & SEARCH_START){
             if (settings.vars.init_state & STARTED){
-              if (opt == OPT_FULL_CAPE){
+              if (rising_full()){
                 settings.vars.init_state &= ~SEARCH_START;
                 settings.vars.init_state &= ~STARTED;
                 settings.vars.init_state |= CHECK_FRAME;
                 settings.vars.init_state |= START_POSITON;
                 settings.vars.stop_time = 1;
                 time_stoped = uwTick;
-                stop_rotate(&motor_two);
-                stop_rotate(&motor_one);
+                stop_move();
                 settings.vars.frame_finded = 0;
-              }else if ((opt&0x02)&&((opt_old&0x02)==0)){
+              }else if (rising_only_opt(MIDLE_PARA)){
                 settings.vars.stop_time = 1;
                 time_stoped = uwTick;
-                stop_rotate(&motor_two);
-                start_rotate(0,800,&motor_one);
+                move_to_right(MAX_MAIN_STEP );
+              }else if(motor_one.step_number==0){
+                break_to_init();
               }
             }else{
-              settings.vars.init_state |= STARTED;
-              stop_rotate(&motor_two);
-              start_rotate(0,800,&motor_one);
+              if (opt == OPT_FULL_CAPE){//not cool state
+                settings.vars.state = NO_STATE;
+              }else{
+                settings.vars.init_state |= STARTED;
+                move_to_right(MAX_MAIN_STEP );
+              }
             }
           }else if (settings.vars.init_state & CHECK_FRAME){
             if (settings.vars.init_state & STARTED){
-              if ((opt == OPT_FULL_CAPE)&&(opt_old != OPT_FULL_CAPE)){
+              if (rising_full()){
                 settings.vars.init_state &= ~CHECK_FRAME;
                 settings.vars.init_state &= ~START_POSITON;
                 settings.vars.init_state &= ~STARTED;
                 settings.vars.init_state |= END_POSITON;
                 settings.vars.stop_time = 1;
                 time_stoped = uwTick;
-                stop_rotate(&motor_two);
-                stop_rotate(&motor_one);
+                stop_move();
                 settings.vars.state = WORK_STATE;
-              }else if ((opt&0x02)&&((opt_old&0x02)==0)){
+                init_frame_struct(settings.vars.frame_finded);
+              }else if (rising_only_opt(MIDLE_PARA)){
                 settings.vars.stop_time = 1;
                 time_stoped = uwTick;
-                stop_rotate(&motor_one);
-                start_rotate(1,800,&motor_two);
+                move_to_left(MAX_MAIN_STEP );
                 settings.vars.frame_finded++;
+              }else if(motor_two.step_number==0){
+                break_to_init();
               }
             }else{
               settings.vars.init_state |= STARTED;
-              stop_rotate(&motor_one);
-              start_rotate(1,800,&motor_two);
+              move_to_left(MAX_MAIN_STEP );
             }
           }
           break;
         case WORK_STATE:
             if (settings.vars.init_state & STARTED){
-              if ((opt == OPT_FULL_CAPE)&&(opt_old != OPT_FULL_CAPE)){
-                if (settings.vars.init_state & END_POSITON){
+              if (rising_full()){
+                if (settings.vars.move_state == MOVE_TO_RIGHT){
                   settings.vars.init_state |= START_POSITON;
                   settings.vars.init_state &= ~END_POSITON;
-                  stop_rotate(&motor_one);
-                  start_rotate(1,800,&motor_two);
+                  move_to_left(MAX_MAIN_STEP );
                 }else{
                   settings.vars.init_state &= ~START_POSITON;
                   settings.vars.init_state |= END_POSITON;
-                  stop_rotate(&motor_two);
-                  start_rotate(0,800,&motor_one);
-
+                  move_to_right(MAX_MAIN_STEP );
                 }
                 settings.vars.stop_time = 1;
                 time_stoped = uwTick;
                 settings.vars.state = WORK_STATE;
               }else {
-                if (settings.vars.init_state & END_POSITON){
-                  if ((opt&0x02)&&((opt_old&0x02)==0)){
-                    stop_rotate(&motor_two);
-                    start_rotate(0,800,&motor_one);
-                    settings.vars.stop_time = 5;
-                    time_stoped = uwTick;
-                    settings.vars.frame_finded++;
-
+                if (settings.vars.move_state == MOVE_TO_RIGHT){
+                  if (settings.vars.init_state & STRETCH){
+                    if(motor_two.step_number == 0){
+                      move_to_right(MAX_MAIN_STEP);
+                      suspend_rotate(&motor_one);
+                      suspend_rotate(&motor_two);
+                      settings.vars.stop_time = 5;
+                      time_stoped = uwTick;
+                    }
+                  }else{
+                    if (rising_only_opt(MIDLE_PARA)&&
+                        (motor_one.step_number<(MAX_MAIN_STEP-STRETCH_STEP-10))){
+                      stretch(STRETCH_STEP);
+                    }else if(motor_one.step_number==0){
+                      break_to_init();
+                    }
                   }
                 }else{
-                  if ((opt&0x02)&&((opt_old&0x02)==0)){
-                    stop_rotate(&motor_one);
-                    start_rotate(1,800,&motor_two);
-                    settings.vars.stop_time = 5;
-                    time_stoped = uwTick;
-                    settings.vars.frame_finded++;
+                  if (settings.vars.init_state & STRETCH){
+                    if(motor_one.step_number == 0){
+                      move_to_left(MAX_MAIN_STEP);
+                      suspend_rotate(&motor_one);
+                      suspend_rotate(&motor_two);
+                      settings.vars.stop_time = 5;
+                      time_stoped = uwTick;
+                    }
+                  }else{
+                    if (rising_only_opt(MIDLE_PARA) &&
+                        (motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-10))){
+                      stretch(STRETCH_STEP);
+                    }else if(motor_two.step_number==0){
+                      break_to_init();
+                    }
                   }
                 }
               }
             }else{
               settings.vars.init_state |= STARTED;
               if (settings.vars.init_state & END_POSITON){
-                stop_rotate(&motor_two);
-                start_rotate(0,800,&motor_one);
+                move_to_right(MAX_MAIN_STEP);
               }else{
-                stop_rotate(&motor_one);
-                start_rotate(1,800,&motor_two);
+                move_to_left(MAX_MAIN_STEP);
               }
             }
+          break;
+        case(NO_STATE):
+          if (settings.vars.init_state & STARTED){
+            if (rising_only_opt(MIDLE_PARA)){
+              break_to_init();
+              time_stoped = uwTick;
+              stop_move();
+            }else if (settings.vars.move_state == MOVE_TO_LEFT){
+              if(motor_two.step_number==0){
+                
+                shift_step =(shift_step>=1800)?200:(shift_step + 400);
+                move_to_right(shift_step);
+              }
+            }else if (settings.vars.move_state == MOVE_TO_RIGHT){
+              if(motor_one.step_number==0){
+                shift_step =(shift_step>=1800)?200:(shift_step + 400);
+                move_to_left(shift_step);
+              }
+            }
+
+          }else{
+            settings.vars.init_state |= STARTED;
+            shift_step = 200;
+            move_to_left(shift_step);
+          }
           break;
         default:
           settings.vars.state = INIT_STATE;
@@ -136,6 +194,90 @@ u8 frame_control_hadler(void){
   }
   opt_old = opt;
 }
+u8 break_to_init(){
+  settings.vars.state = INIT_STATE;
+  settings.vars.init_state |= SEARCH_START;
+  settings.vars.init_state &= ~STARTED;
+  settings.vars.stop_time = 1;
+}
+u8 move_to_left(u16 step){
+  settings.vars.init_state &= ~STRETCH;
+  settings.vars.move_state = MOVE_TO_LEFT;
+  stop_rotate(&motor_one);
+  start_rotate(1,step,&motor_two);
+}
+u8 move_to_right(u16 step){
+  settings.vars.init_state &= ~STRETCH;
+  settings.vars.move_state = MOVE_TO_RIGHT;
+  stop_rotate(&motor_two);
+  start_rotate(0,step,&motor_one);
+}
+u8 stretch(u16 step){
+  settings.vars.init_state |= STRETCH;
+  if (settings.vars.move_state == MOVE_TO_RIGHT){
+    stop_rotate(&motor_one);
+    suspend_rotate(&motor_one);
+    start_rotate(1,step,&motor_two);
+  }else{
+    stop_rotate(&motor_two);
+    suspend_rotate(&motor_two);
+    start_rotate(0,step,&motor_one);
+  }
+}
+u8 stop_move(){
+  settings.vars.init_state &= ~STRETCH;
+  settings.vars.move_state = STOPED;
+  stop_rotate(&motor_two);
+  stop_rotate(&motor_one);
+}
+
+
+u8 rising_only_opt(u8 para_number){
+  u8 para_inverse;
+  para_inverse = ~para_number;
+  para_inverse &= 0x07;
+  if ((opt&para_number)&&((opt_old&para_number)==0)&&((opt&para_inverse))==0){
+    return 1;
+  }else{
+    return 0;
+  }
+}  
+u8 rising_midle_opt_after_left(){
+  if ((opt&0x02)&&((opt_old&0x02)==0)&&(opt&0x01)){
+    return 1;
+  }else{
+    return 0;
+  }
+}  
+u8 rising_midle_opt_after_right(){
+  if ((opt&0x02)&&((opt_old&0x02)==0)&&(opt&0x04)){
+    return 1;
+  }else{
+    return 0;
+  }
+}  
+u8 rising_left_after_two_right(){
+  if ((opt&0x01)&&((opt_old&0x01)==0)&&(opt&0x02)&&(opt&0x04)){
+    return 1;
+  }else{
+    return 0;
+  }
+}  
+u8 rising_right_after_two_left(){
+  if ((opt&0x04)&&((opt_old&0x04)==0)&&(opt&0x02)&&(opt&0x01)){
+    return 1;
+  }else{
+    return 0;
+  }
+}  
+u8 rising_full(){
+  if(rising_right_after_two_left()||rising_left_after_two_right()){
+    return 1;
+  }else{
+    return 0;
+  }
+}
+
 u8 get_opt_mask(){
   u8 opt_state;
   opt_state =0;

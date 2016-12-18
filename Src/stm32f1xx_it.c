@@ -210,6 +210,13 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
   /* USER CODE END USB_LP_CAN1_RX0_IRQn 0 */
   HAL_PCD_IRQHandler(&hpcd_USB_FS);
   lenta++;
+  if (settings.vars.usb_tranceiver_state & USB_TRANSMIT_PACKET){
+    settings.vars.usb_tranceiver_state &= ~USB_TRANSMIT_PACKET;
+    settings.vars.usb_tranceiver_state &= ~USB_RECIVE_OR_TRANSMIT_PACKET;
+  }else{
+    settings.vars.usb_tranceiver_state |= USB_RECIVE_OR_TRANSMIT_PACKET;
+  }
+  
   /* USER CODE BEGIN USB_LP_CAN1_RX0_IRQn 1 */
   /* USER CODE END USB_LP_CAN1_RX0_IRQn 1 */
 }

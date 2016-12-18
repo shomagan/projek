@@ -62,21 +62,37 @@ typedef unsigned short u16;
 typedef unsigned char u8;
 typedef unsigned const char uc8;
 extern u32 time_ms;
-
+typedef struct __attribute__((packed)){
+  u16 time;
+  u16  option;
+  u32 reserve;
+}frame_settings;
+#define ENABLE_LED BIT(0)
 typedef union{
 	struct __attribute__((packed)){
     u16 state;
 #define INIT_STATE 1    
 #define WORK_STATE 2    
+#define NO_STATE   3    
     u16 init_state;
 #define SEARCH_START  BIT(0)
 #define CHECK_FRAME  BIT(1)
 #define START_POSITON  BIT(2)
 #define STARTED  BIT(3)
 #define END_POSITON  BIT(4)
-    
+#define STRETCH      BIT(5)
     u16 frame_finded;
     u16 stop_time;  //current time in sec
+    u8 usb_tranceiver_state;
+#define USB_RECIVE_OR_TRANSMIT_PACKET BIT(0)  //set in irq when receive or transmith data
+#define USB_TRANSMIT_PACKET BIT(1)  //set in irq when receive or transmith data
+    u8 move_state;
+#define MOVE_TO_RIGHT 0
+#define MOVE_TO_LEFT  1
+#define STOPED        2
+    u16 frame_number_saved;
+    frame_settings frame[118];//118*8 = 944
+    u16 crc16;
   } vars;
 	u8 Bytes[1024];
   u16 Words[512];
@@ -84,7 +100,6 @@ typedef union{
 extern settings_t settings;
 extern u8 buff_temp[256];
 extern u32 lenta;
-
 extern u8 config;
 /* USER CODE END Private defines */
 

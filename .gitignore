@@ -34,4 +34,5 @@
 MDK-ARM/
 EWARM/
 .mxproject
+ide/__pycache__
 *.ioc
