@@ -59,6 +59,7 @@ class TestApp(App):
 #        self.layout.add_widget(textinput)
         return self.layout
     def find_device(self):
+        have_serial = 1		
         for i in range(len(self.com_available)):
             have_serial = 1
             try:
@@ -83,7 +84,10 @@ class TestApp(App):
                       break
                 if have_serial:
                     break  
+                else:
+                    ser.close()
         if have_serial:
+            ser.timeout = 0.3
             self.layout.clear_widgets()
             self.layout.cols = 2
             self.time_input = []
@@ -128,7 +132,6 @@ class TestApp(App):
         print(send_request_init)
         ser.reset_input_buffer()
         ser.write(send_request_init.encode('ascii'))
-        ser.timeout = 0.2
         receive = ser.read(11)
         print(receive)
         return receive
@@ -137,7 +140,6 @@ class TestApp(App):
         print(send_request_time)
         ser.reset_input_buffer()
         ser.write(send_request_time.encode('ascii'))
-        ser.timeout = 0.2
         receive = ser.read(16)
         print(receive)
 #        receive_ord = [ord(receive[i]) for i in range(len(receive))]
@@ -188,7 +190,6 @@ class TestApp(App):
         send_time[19] = (crc>>8)&0xff
         print(send_time)
         ser.write(send_time)
-        ser.timeout = 0.2
         receive = ser.read(20)
         print(receive)
 #        receive_ord = [ord(receive[i]) for i in range(len(receive))]
