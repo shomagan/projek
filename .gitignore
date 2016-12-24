@@ -36,3 +36,4 @@ EWARM/
 .mxproject
 ide/__pycache__
 *.ioc
+ide/*.ini

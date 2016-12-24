@@ -57,9 +57,7 @@ u8 init_frame_struct(u16 frame_number){
     p_flash = (u16*)(WRITABLE_FLASH_PAGE+i*2);
     p_struct[i] = *p_flash;
   }
-  if (check_crc16((u8*)p_struct,948)&&(frame_number==settings.vars.frame_number_saved)){
-    
-  }else{
+  if (!check_crc16((u8*)p_struct,948)){
     settings.vars.frame_number_saved = frame_number;
     for (u16 i=0;i<118;i++){
       if (i<frame_number){
@@ -81,5 +79,4 @@ u8 init_frame_struct(u16 frame_number){
     }
   }
 }
-
 

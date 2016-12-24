@@ -122,6 +122,7 @@ int main(void)
   MX_USB_DEVICE_Init();
   MX_ADC2_Init();
   MX_USART1_UART_Init();
+  init_frame_struct(0);
 
   /* USER CODE BEGIN 2 */
 
