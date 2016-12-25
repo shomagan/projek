@@ -30,7 +30,7 @@ settings.write('    "section": "time_down",\n')
 settings.write('    "key": "time_min"\n')
 settings.write('  },')
 
-for i in range(1,118):
+for i in range(1,119):
     settings.write('  {\n')
     settings.write('    "type": "string",\n')
     settings.write('    "title": "Frame'+str(i)+'",\n')
@@ -45,7 +45,7 @@ for i in range(1,118):
     settings.write('    "section": "Frame'+str(i)+'",\n')
     settings.write('    "key": "time_sec"\n')
     settings.write('  },')
-    if i!=117:
+    if i!=118:
         settings.write('  {\n')
         settings.write('    "type": "bool",\n')
         settings.write('    "title": "LED on transition'+str(i)+'",\n')

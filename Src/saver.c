@@ -53,12 +53,17 @@ u8 init_frame_struct(u16 frame_number){
   u16* p_struct;
   u16* p_flash;
   p_struct = (u16*)&settings.vars.frame_number_saved;
-  for (u16 i =0;i<474;i++){
+  for (u16 i =0;i<476;i++){
     p_flash = (u16*)(WRITABLE_FLASH_PAGE+i*2);
     p_struct[i] = *p_flash;
   }
-  if (!check_crc16((u8*)p_struct,948)){
-    settings.vars.frame_number_saved = frame_number;
+  if (!check_crc16((u8*)p_struct,952)){
+    settings.vars.frame_number_saved = 0;
+    settings.vars.down_time.hour=25;
+    settings.vars.up_time.hour = 25;
+    settings.vars.down_time.min = 0;
+    settings.vars.up_time.min  = 0;
+
     for (u16 i=0;i<118;i++){
       if (i<frame_number){
         settings.vars.frame[i].option = 0;
@@ -70,13 +75,27 @@ u8 init_frame_struct(u16 frame_number){
         settings.vars.frame[i].reserve = 0;
       }
     }
-    settings.vars.crc16 = crc16((u8*)p_struct,946);
+    rewrite_page();
+  }
+  if (settings.vars.frame_number_saved != frame_number){
+    settings.vars.frame_number_saved = frame_number;
+    rewrite_page();
+  }
+}
+u8 rewrite_page(){
+    u16* p_struct;
+    p_struct = (u16*)&settings.vars.frame_number_saved;
+    settings.vars.crc16 = crc16((u8*)p_struct,950);
     HAL_FLASH_OB_Unlock();
     HAL_FLASH_Unlock();
     FLASH_ErasePage(WRITABLE_FLASH_PAGE);
-    for (u16 i =0;i<474;i++){
+    for (u16 i =0;i<476;i++){
       flash_program_u16(WRITABLE_FLASH_PAGE+i*2, p_struct[i]);
     }
-  }
 }
-
+/*
+       (settings.vars.down_time.hour>25)||
+       (settings.vars.up_time.hour>25)||
+       (settings.vars.down_time.min>59)||
+       (settings.vars.up_time.min>59)||
+*/

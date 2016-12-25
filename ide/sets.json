@@ -2123,5 +2123,23 @@
     "desc": "Choose the time 117",
     "section": "Frame117",
     "key": "time_sec"
+  },  {
+    "type": "bool",
+    "title": "LED on transition117",
+    "desc": "led transition enable 117",
+    "section": "Frame117",
+    "key": "led"
+  },  {
+    "type": "string",
+    "title": "Frame118",
+    "desc": "Choose name 118",
+    "section": "Frame118",
+    "key": "name"
+  },  {
+    "type": "numeric",
+    "title": "Time in sec 118",
+    "desc": "Choose the time 118",
+    "section": "Frame118",
+    "key": "time_sec"
   }
 ]

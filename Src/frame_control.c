@@ -27,6 +27,9 @@ u8 move_to_right(u16 step);
 u8 stretch(u16 step);
 u8 stop_move();
 u8 break_to_init();
+u8 enable_led();
+u8 disable_led();
+
 
 
 u8 frame_init(void){
@@ -56,7 +59,7 @@ u8 frame_control_hadler(void){
               }else if (rising_only_opt(MIDLE_PARA)){
                 settings.vars.stop_time = 1;
                 time_stoped = uwTick;
-                move_to_right(MAX_MAIN_STEP );
+                move_to_right(MAX_MAIN_STEP);
               }else if(motor_one.step_number==0){
                 break_to_init();
               }
@@ -65,7 +68,7 @@ u8 frame_control_hadler(void){
                 settings.vars.state = NO_STATE;
               }else{
                 settings.vars.init_state |= STARTED;
-                move_to_right(MAX_MAIN_STEP );
+                move_to_right(MAX_MAIN_STEP);
               }
             }
           }else if (settings.vars.init_state & CHECK_FRAME){
@@ -74,7 +77,6 @@ u8 frame_control_hadler(void){
                 settings.vars.init_state &= ~CHECK_FRAME;
                 settings.vars.init_state &= ~START_POSITON;
                 settings.vars.init_state &= ~STARTED;
-                settings.vars.init_state |= END_POSITON;
                 settings.vars.stop_time = 1;
                 time_stoped = uwTick;
                 stop_move();
@@ -99,25 +101,32 @@ u8 frame_control_hadler(void){
               if (rising_full()){
                 if (settings.vars.move_state == MOVE_TO_RIGHT){
                   settings.vars.init_state |= START_POSITON;
-                  settings.vars.init_state &= ~END_POSITON;
-                  move_to_left(MAX_MAIN_STEP );
+                  settings.vars.frame_finded = 0;
+                  move_to_left(MAX_MAIN_STEP);
                 }else{
-                  settings.vars.init_state &= ~START_POSITON;
-                  settings.vars.init_state |= END_POSITON;
-                  move_to_right(MAX_MAIN_STEP );
+                  if (settings.vars.frame_finded != settings.vars.frame_number_saved){
+                    break_to_init();
+                  }else{
+                    settings.vars.init_state &= ~START_POSITON;
+                    move_to_right(MAX_MAIN_STEP);
+                  }
                 }
                 settings.vars.stop_time = 1;
                 time_stoped = uwTick;
                 settings.vars.state = WORK_STATE;
-              }else {
+              }else{
                 if (settings.vars.move_state == MOVE_TO_RIGHT){
                   if (settings.vars.init_state & STRETCH){
                     if(motor_two.step_number == 0){
                       move_to_right(MAX_MAIN_STEP);
                       suspend_rotate(&motor_one);
                       suspend_rotate(&motor_two);
-                      settings.vars.stop_time = 5;
+                      settings.vars.stop_time = settings.vars.frame[settings.vars.frame_finded].time;
+                      if (settings.vars.stop_time){
+                        enable_led();
+                      }
                       time_stoped = uwTick;
+                      settings.vars.frame_finded--;
                     }
                   }else{
                     if (rising_only_opt(MIDLE_PARA)&&
@@ -133,8 +142,12 @@ u8 frame_control_hadler(void){
                       move_to_left(MAX_MAIN_STEP);
                       suspend_rotate(&motor_one);
                       suspend_rotate(&motor_two);
-                      settings.vars.stop_time = 5;
+                      settings.vars.stop_time = settings.vars.frame[settings.vars.frame_finded].time;
+                      if (settings.vars.stop_time){
+                        enable_led();
+                      }
                       time_stoped = uwTick;
+                      settings.vars.frame_finded++;
                     }
                   }else{
                     if (rising_only_opt(MIDLE_PARA) &&
@@ -148,11 +161,7 @@ u8 frame_control_hadler(void){
               }
             }else{
               settings.vars.init_state |= STARTED;
-              if (settings.vars.init_state & END_POSITON){
-                move_to_right(MAX_MAIN_STEP);
-              }else{
-                move_to_left(MAX_MAIN_STEP);
-              }
+              move_to_right(MAX_MAIN_STEP);
             }
           break;
         case(NO_STATE):
@@ -187,6 +196,24 @@ u8 frame_control_hadler(void){
     suspend_rotate(&motor_one);
     suspend_rotate(&motor_two);
     if (uwTick>(time_stoped+settings.vars.stop_time*1000)){
+      if (settings.vars.move_state == MOVE_TO_RIGHT){
+        if (settings.vars.frame_finded>0){
+          if(settings.vars.frame[settings.vars.frame_finded-1].option & ENABLE_LED){
+          }else{
+            disable_led();
+          }
+        }else{
+          if(settings.vars.frame[settings.vars.frame_finded].option & ENABLE_LED){
+          }else{
+            disable_led();
+          }
+        }
+      }else{
+        if(settings.vars.frame[settings.vars.frame_finded].option & ENABLE_LED){
+        }else{
+          disable_led();
+        }
+      }
       settings.vars.stop_time =0;
       awaik_rotate(&motor_one);
       awaik_rotate(&motor_two);
@@ -276,6 +303,12 @@ u8 rising_full(){
   }else{
     return 0;
   }
+}
+u8 enable_led(){
+  HAL_GPIO_WritePin(GPIOA, BIT(4), GPIO_PIN_RESET);//led enable
+}
+u8 disable_led(){
+  HAL_GPIO_WritePin(GPIOA, BIT(4), GPIO_PIN_SET);//led disable
 }
 
 u8 get_opt_mask(){

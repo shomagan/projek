@@ -5,7 +5,7 @@ import serial_port
 import serial
 import platform
 import re
-from time import localtime
+from time import localtime, sleep
 
 from kivy.app import App
 from kivy.logger import Logger
@@ -30,6 +30,14 @@ from kivy.properties import OptionProperty, ObjectProperty
 send_request_init = 'Jalisco'
 receive_answer_init = b'Guadalajara'
 send_request_time = 'how_mach_time'
+MAX_WRITE_SETTINGS = 30
+SETTINGS_PREFIX_SIZE = 13
+settings_write = "settings_rite"
+settings_read = "settings_read"
+settings_save = "settings_save"
+settings_write_b = b'settings_rite'
+settings_read_b = b'settings_read'
+settings_save_b = b'settings_save'
 
 
 def crc16(pck, lenght):
@@ -73,9 +81,8 @@ class TestApp(App):
         self.settings_cls = MySettingsWithTabbedPanel
         self.have_serial = 0
         platform_type = platform.platform()
-        print(platform_type)
+        Logger.info("platform - {0}".format(platform_type))
         if 'Windows-10' in platform_type:
-            print('desyatka')
             self.wind10 = True
         else:
             self.wind10 = False
@@ -85,9 +92,7 @@ class TestApp(App):
         find_button.size_hint_x = None
         find_button.bind(on_press=lambda j: self.find_device())
         self.connect_status = CheckBox(active=False, group="money")
-        self.rtc = TextInput(text='current time 0:0:0 \n'
-                                  'time up      0:0:0 \n'
-                                  'time down    0:0:0 \n')
+        self.rtc = TextInput(text='current time 0:0:0 \n')
         read_time_button = Button(text='read time')
         read_time_button.size_hint_x = None
         read_time_button.bind(on_press=lambda j: self.read_time(self.ser))
@@ -119,7 +124,7 @@ class TestApp(App):
         """
         config.setdefaults('time_up', {'time_hour': 0, 'time_min': 0})
         config.setdefaults('time_down', {'time_hour': 0, 'time_min': 0})
-        for i in range(1, 118):
+        for i in range(1, 119):
             config.setdefaults('Frame'+str(i), {'name': 'FRAME'+str(i), 'time_sec': 20, 'led': False})
 
     def build_settings(self, settings):
@@ -142,19 +147,17 @@ class TestApp(App):
                 if self.wind10:
                     self.ser.timeout = 0.3
 
-                print(self.ser.name)  # check which port was really used
             except serial.SerialException as e:
                 self.have_serial = 0
-                print("could not open port \n", self.com_available[i])
                 break
             if self.have_serial:
                 self.have_serial = 0
                 for j in range(5):
                     answer = self.send_request(self.ser)
                     answer_str = answer
-                    print("otvet ", answer_str)
+                    Logger.info("otvet {0}".format(answer_str))
                     if answer_str == receive_answer_init:
-                        print("find_packet")
+                        Logger.info("find device on {0}".format(com_available[i]))
                         self.have_serial = 1
                         break
                 if self.have_serial:
@@ -166,45 +169,231 @@ class TestApp(App):
                     self.ser.close()
 
     def write_time(self, ser):
-        print(send_request_init)
+        Logger.info("send_request_init {0}".format(send_request_init))
         ser.reset_input_buffer()
         ser.write(send_request_init.encode('ascii'))
         if not self.wind10:
             ser.timeout = 0.3
         receive = ser.read(11)
-        print(receive)
+        self.ser.reset_input_buffer()
+        Logger.info("write time receive {0}".format(receive))
         return receive
 
     def send_request(self, ser):
-        print(send_request_init)
+        Logger.info("send_request_init {0}".format(send_request_init))
         ser.reset_input_buffer()
         ser.write(send_request_init.encode('ascii'))
         if not self.wind10:
             ser.timeout = 0.3
         receive = ser.read(11)
-        print(receive)
+        self.ser.reset_input_buffer()
+        Logger.info("recv_request_init {0}".format(receive))
         return receive
 
+    def write_settings_c(self, index, number):
+        '''return 1 if ok write'''
+        send_buff = [i for i in range(SETTINGS_PREFIX_SIZE+number*4+1+2)]
+        for i in range(SETTINGS_PREFIX_SIZE):
+            send_buff[i] = settings_write_b[i]
+        send_len = SETTINGS_PREFIX_SIZE
+        send_buff[send_len] = number
+        send_len += 1
+        for i in range(number):
+            send_buff[send_len] = index+i
+            send_len += 1
+            if index+i == 118:
+                hour = int(self.config.get('time_up', 'time_hour'))
+                min = int(self.config.get('time_up', 'time_min'))
+                time_sec = (hour | (min << 8)) & 0xffff
+                led = 0
+            elif index+i == 119:
+                hour = int(self.config.get('time_down', 'time_hour'))
+                min = int(self.config.get('time_down', 'time_min'))
+                time_sec = (hour | (min << 8)) & 0xffff
+                led = 0
+            else:
+                time_sec = int(self.config.get('Frame'+str(index+i+1), 'time_sec'))
+                led = int(self.config.get('Frame'+str(index+i+1), 'led'))
+            send_buff[send_len] = led & 0xff
+            send_len += 1
+            send_buff[send_len] = time_sec & 0xff
+            send_len += 1
+            send_buff[send_len] = (time_sec >> 8) & 0xff
+            send_len += 1
+
+        self.ser.reset_input_buffer()
+        crc = crc16(send_buff, SETTINGS_PREFIX_SIZE+number*4+1)
+        send_buff[SETTINGS_PREFIX_SIZE+number*4+1] = crc & 0xff
+        send_buff[SETTINGS_PREFIX_SIZE+number*4+1+1] = (crc >> 8) & 0xff
+        self.ser.write(send_buff)
+        if not self.wind10:
+            self.ser.timeout = 0.3
+        receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+number+2)
+        if len(receive_buff) == SETTINGS_PREFIX_SIZE+number+2:
+            crc = crc16(receive_buff, SETTINGS_PREFIX_SIZE+number)
+            crc_r = receive_buff[SETTINGS_PREFIX_SIZE+number] | (receive_buff[SETTINGS_PREFIX_SIZE+number+1] << 8)
+            if crc == crc_r:
+                for i in range(number):
+                    if receive_buff[SETTINGS_PREFIX_SIZE+i] != index + i:
+                        Logger.info("mismatch index {0}, {1}".format(receive_buff[SETTINGS_PREFIX_SIZE+i], index + i))
+                        return 0
+                return 1
+            else:
+                Logger.info("crc mismatch: {0}, {1}".format(crc, crc_r))
+        else:
+            Logger.info("len mismatch: {0}".format(len(receive_buff)))
+
+            return 0
+
     def write_settings(self):
+        '''write all settings '''
+        if self.have_serial:
+            if self.write_settings_c(0, 10):
+                Logger.info("good write settings: {0}, {1}".format(0, 10))
+            if self.write_settings_c(10, 10):
+                Logger.info("good write settings: {0}, {1}".format(10, 10))
+            if self.write_settings_c(20, 10):
+                Logger.info("good write settings: {0}, {1}".format(20, 10))
+            if self.write_settings_c(30, 10):
+                Logger.info("good write settings: {0}, {1}".format(30, 10))
+            if self.write_settings_c(40, 10):
+                Logger.info("good write settings: {0}, {1}".format(40, 10))
+            if self.write_settings_c(50, 10):
+                Logger.info("good write settings: {0}, {1}".format(50, 10))
+            if self.write_settings_c(60, 10):
+                Logger.info("good write settings: {0}, {1}".format(60, 10))
+            if self.write_settings_c(70, 10):
+                Logger.info("good write settings: {0}, {1}".format(70, 10))
+            if self.write_settings_c(80, 10):
+                Logger.info("good write settings: {0}, {1}".format(80, 10))
+            if self.write_settings_c(90, 10):
+                Logger.info("good write settings: {0}, {1}".format(90, 10))
+            if self.write_settings_c(100, 10):
+                Logger.info("good write settings: {0}, {1}".format(100, 10))
+            if self.write_settings_c(110, 10):
+                Logger.info("good write settings: {0}, {1}".format(110, 10))
+            self.save_settings_c()
         return 0
+
+    def read_settings_c(self, index, number):
+        send_buff = [i for i in range(SETTINGS_PREFIX_SIZE+2)]
+        for i in range(SETTINGS_PREFIX_SIZE):
+            send_buff[i] = settings_read_b[i]
+        send_len = SETTINGS_PREFIX_SIZE
+        send_buff[send_len] = number
+        send_len += 1
+        send_buff[send_len] = index
+        send_len += 1
+        self.ser.reset_input_buffer()
+        Logger.info("read settings {0}".format(send_buff))
+        self.ser.write(send_buff)
+        if not self.wind10:
+            self.ser.timeout = 0.4
+        receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+number*4+2)
+        self.ser.reset_input_buffer()
+        self.ser.write(send_buff)
+        if not self.wind10:
+            self.ser.timeout = 0.4
+        receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+number*4+2)
+        Logger.info("read settings {0}".format(receive_buff))
+        if len(receive_buff) == SETTINGS_PREFIX_SIZE+number*4+2:
+            crc = crc16(receive_buff, SETTINGS_PREFIX_SIZE+number*4)
+            crc_r = receive_buff[SETTINGS_PREFIX_SIZE+number*4] | (receive_buff[SETTINGS_PREFIX_SIZE+number*4+1] << 8)
+            if crc == crc_r:
+                Logger.info("crc mtch: {0}, {1}".format(crc, crc_r))
+                j = SETTINGS_PREFIX_SIZE
+                for i in range(number):
+                    index_recv = receive_buff[j]
+                    j += 1
+                    if index_recv == 118:
+                        led = receive_buff[j]
+                        j += 1
+                        hour = receive_buff[j]
+                        j += 1
+                        min = receive_buff[j]
+                        j += 1
+                        Logger.info("read time_up: {0}, {1}".format(hour, min))
+                        self.config.set('time_up', 'time_hour', str(hour))
+                        self.config.write()
+                        self.config.set('time_up', 'time_min', str(min))
+                        self.config.write()
+                    elif index_recv == 119:
+                        led = receive_buff[j]
+                        j += 1
+                        hour = receive_buff[j]
+                        j += 1
+                        min = receive_buff[j]
+                        j += 1
+                        Logger.info("read time_down: {0}, {1}".format(hour, min))
+                        self.config.set('time_down', 'time_hour', str(hour))
+                        self.config.write()
+                        self.config.set('time_down', 'time_min', str(min))
+                        self.config.write()
+                    else:
+                        led = receive_buff[j]
+                        j += 1
+                        time_sec = receive_buff[j]
+                        j += 1
+                        time_sec |= ((receive_buff[j] << 8) & 0xff00)
+                        j += 1
+                        Logger.info("read frame {0},{1}".format((index_recv+1), time_sec))
+                        self.config.set('Frame'+str(index_recv+1), 'time_sec', str(time_sec))
+                        self.config.write()
+                        self.config.set('Frame'+str(index_recv+1), 'led', str(led))
+                        self.config.write()
+            else:
+                Logger.info("crc mismatch: {0}, {1}".format(crc, crc_r))
+                return 0
+            return 1
+        else:
+            return 0
 
     def read_settings(self):
+        ''' read all settings '''
+        if self.have_serial:
+            if self.read_settings_c(0, 30):
+                Logger.info("good read settings: {0}, {1}".format(0, 30))
+            if self.read_settings_c(30, 30):
+                Logger.info("good read settings: {0}, {1}".format(30, 30))
+            if self.read_settings_c(60, 30):
+                Logger.info("good read settings: {0}, {1}".format(60, 30))
+            if self.read_settings_c(90, 30):
+                Logger.info("good read settings: {0}, {1}".format(90, 30))
         return 0
 
+
+    def save_settings_c(self):
+        '''return 1 if ok write'''
+        send_buff = [i for i in range(SETTINGS_PREFIX_SIZE)]
+        for i in range(SETTINGS_PREFIX_SIZE):
+            send_buff[i] = settings_save_b[i]
+        self.ser.reset_input_buffer()
+        self.ser.write(send_buff)
+        if not self.wind10:
+            self.ser.timeout = 0.3
+        receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+2)
+        crc = crc16(receive_buff, SETTINGS_PREFIX_SIZE)
+        crc_r = receive_buff[SETTINGS_PREFIX_SIZE] | (receive_buff[SETTINGS_PREFIX_SIZE+1] << 8)
+        if crc == crc_r and len(receive_buff) == SETTINGS_PREFIX_SIZE+2:
+            Logger.info("crc mtch: {0}, {1}".format(crc, crc_r))
+            return 1
+        else:
+            Logger.info("crc mismatch: {0}, {1}".format(crc, crc_r))
+            return 0
+
     def read_time(self, ser):
-        print(send_request_time)
+        Logger.info("send_request_time {0}".format(send_request_time))
         ser.reset_input_buffer()
         ser.write(send_request_time.encode('ascii'))
         if not self.wind10:
             ser.timeout = 0.3
-        receive = ser.read(16)
-        print(receive)
-        #        receive_ord = [ord(receive[i]) for i in range(len(receive))]
+        receive = ser.read(18)
+        self.ser.reset_input_buffer()
+        Logger.info("send_request_time receive {0}".format(receive))
         receive_ord = list(receive)
-        print(receive_ord)
-        if len(receive_ord) == 16:
-            crc = crc16(receive_ord, 14)
-            crc_r = receive_ord[14] | (receive_ord[15] << 8)
+        if len(receive_ord) == 18:
+            crc = crc16(receive_ord, 16)
+            crc_r = receive_ord[16] | (receive_ord[17] << 8)
             if crc == crc_r:
                 hours = receive_ord[0]
                 minutes = receive_ord[2]
@@ -213,20 +402,19 @@ class TestApp(App):
                 month = receive_ord[8]
                 date = receive_ord[10]
                 year = receive_ord[12]
+                frame_number = receive_ord[13] | (receive_ord[14] << 8)
                 self.layout.remove_widget(self.rtc)
-                self.rtc = TextInput(text='current time '+str(hours)+':'+str(minutes)+':'+str(seconds)+'\n'
-                                          'time up      0:0:0 \n'
-                                          'time down    0:0:0 \n')
+                self.rtc = TextInput(text='current time '+str(hours)+':'+str(minutes)+':'+str(seconds)+'\n'+
+                                            'frame number - '+str(frame_number)+'\n')
                 self.layout.add_widget(self.rtc)
 
             else:
-                print("crc mismatch", hex(crc), hex(crc_r))
+                Logger.info("crc mismatch {0},{1}".format(hex(crc), hex(crc_r)))
         return receive
 
     def sync_time(self, ser):
         send_time = [i for i in range(20)]
         tm = localtime()
-        print(tm)
         send_time[0] = ord('t')
         send_time[1] = ord('i')
         send_time[2] = ord('m')
@@ -242,20 +430,17 @@ class TestApp(App):
         crc = crc16(send_time, 18)
         send_time[18] = crc & 0xff
         send_time[19] = (crc >> 8) & 0xff
-        print(send_time)
         ser.write(send_time)
         if not self.wind10:
             ser.timeout = 0.3
         receive = ser.read(20)
-        print(receive)
         #        receive_ord = [ord(receive[i]) for i in range(len(receive))]
         receive_ord = list(receive)
-        print(receive_ord)
         if len(receive_ord) == 16:
             if send_time == receive_ord:
                 self.status_sync.active = True
             else:
-                print("time mismatch")
+                Logger.info("time mismatch")
         return receive
 
     def on_config_change(self, config, section, key, value):

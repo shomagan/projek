@@ -20,3 +20,4 @@
 HAL_StatusTypeDef FLASH_ErasePage(uint32_t Page_Address);
 HAL_StatusTypeDef flash_program_u16(uint32_t Address, uint16_t Data);
 u8 init_frame_struct(u16 frame_number);
+u8 rewrite_page();

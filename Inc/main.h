@@ -63,6 +63,11 @@ typedef unsigned char u8;
 typedef unsigned const char uc8;
 extern u32 time_ms;
 typedef struct __attribute__((packed)){
+  u8 hour;
+  u8 min;
+}time_hm;
+
+typedef struct __attribute__((packed)){
   u16 time;
   u16  option;
   u32 reserve;
@@ -91,6 +96,10 @@ typedef union{
 #define MOVE_TO_LEFT  1
 #define STOPED        2
     u16 frame_number_saved;
+    time_hm up_time;  //index 118
+#define UP_TIME_INDEX 118
+    time_hm down_time;  //index 119
+#define DOWN_TIME_INDEX 119
     frame_settings frame[118];//118*8 = 944
     u16 crc16;
   } vars;

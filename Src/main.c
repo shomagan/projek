@@ -437,11 +437,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-
+  /*Configure GPIO pins : Pa4 led enable */
+  GPIO_InitStruct.Pin = GPIO_PIN_4;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   HAL_GPIO_WritePin(GPIOB, BIT(8)|BIT(9)|BIT(10)|BIT(11), GPIO_PIN_RESET);//dir step 
   HAL_GPIO_WritePin(GPIOB, BIT(12)|BIT(13), GPIO_PIN_RESET);//enable is active
   HAL_GPIO_WritePin(GPIOB, BIT(14), GPIO_PIN_SET);//pin reset disable
+  HAL_GPIO_WritePin(GPIOA, BIT(4), GPIO_PIN_SET);//led disable
 }
 
 /* USER CODE BEGIN 4 */

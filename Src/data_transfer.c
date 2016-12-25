@@ -10,9 +10,16 @@ char init_send[] = "Guadalajara";
 char const init_receive[] = "Jalisco";
 char how_time[]  = "how_mach_time";
 char set_time[]  = "time";
+#define SETTINGS_PREFIX_SIZE 13
+char settings_write[]  = "settings_rite";
+char settings_read[]  = "settings_read";
+char settings_save[]  = "settings_save";
 static u8 usb_send_packet(u8* buff,u16 len);
 static void time_answer(void);
 static void sync_time(u16* buff);
+static void settings_save_data(u8* buff);
+static void settings_read_data(u8* buff);
+static void settings_write_data(u8* buff);
 extern RTC_HandleTypeDef hrtc;
 
 u8 receive_packet_hanling(u8* buff){
@@ -24,10 +31,17 @@ u8 receive_packet_hanling(u8* buff){
     time_answer();
   }else if(strncmp((char*)set_time, (char*)buff,sizeof(set_time)-1)==0){
     sync_time((u16*)buff);
+  }else if(strncmp((char*)settings_write, (char*)buff,sizeof(settings_write)-1)==0){
+    settings_write_data((u8*)buff);
+  }else if(strncmp((char*)settings_read, (char*)buff,sizeof(settings_read)-1)==0){
+    settings_read_data((u8*)buff);
+  }else if(strncmp((char*)settings_save, (char*)buff,sizeof(settings_save)-1)==0){
+    settings_save_data((u8*)buff);
   }
   return nruter;
 }
 u8 usb_send_packet(u8* buff,u16 len){
+  static u8 tx_buff[256];
   for(u16 i =0;i<len;i++){
     UserTxBufferFS[i] = buff[i];
   }
@@ -36,7 +50,7 @@ u8 usb_send_packet(u8* buff,u16 len){
   return 0x00;
 }
 void time_answer(void){
-  u16 buff[8];
+  u16 buff[9];
   RTC_TimeTypeDef sTime;
   RTC_DateTypeDef DateToUpdate;
 
@@ -67,8 +81,9 @@ void time_answer(void){
   buff[4] = BKP->DR5  = DateToUpdate.Month ;
   buff[5] = BKP->DR6  = DateToUpdate.Date ;
   buff[6] = BKP->DR7  = DateToUpdate.Year ;
-  add_crc16((u8*)buff,14);
-  usb_send_packet((u8*)buff,16);
+  buff[7] = settings.vars.frame_number_saved;
+  add_crc16((u8*)buff,16);
+  usb_send_packet((u8*)buff,18);
 }
 void sync_time(u16* buff){
   RTC_TimeTypeDef sTime;
@@ -95,8 +110,109 @@ void sync_time(u16* buff){
   }
 
 }
+void settings_write_data(u8* buff){
+  u16 j;
+  u8 settings_number;
+  u8 buff_answer[256],len_answer;
+  for (u8 i=0;i<SETTINGS_PREFIX_SIZE;i++){
+    buff_answer[i] = buff[i];
+  }
+  j = SETTINGS_PREFIX_SIZE;
+  settings_number = buff[j];
+  j++;
+  len_answer = SETTINGS_PREFIX_SIZE;
+  if(check_crc16(buff,SETTINGS_PREFIX_SIZE+settings_number*4+1+2)){
+    for (u16 i=0;i<settings_number;i++){
+      u8 index,param_led_transit;
+      u16 param_time;
+      index = buff[j];
+      j++;
+      param_led_transit = buff[j];
+      j++;
+      param_time = ((u16)(buff[j])&0x00ff)|(((u16)(buff[j+1])<<8)&0xff00);
+      j+=2;
+      if(index==UP_TIME_INDEX){
+        settings.vars.up_time.hour = param_time&0x00ff;
+        settings.vars.up_time.min = (param_time>>8)&0x00ff;
+      }else if(index==DOWN_TIME_INDEX){
+        settings.vars.down_time.hour = param_time&0x00ff;
+        settings.vars.down_time.min = (param_time>>8)&0x00ff;
+      }else if(index < UP_TIME_INDEX){
+        settings.vars.frame[index].time = param_time;
+        if(param_led_transit==1){
+          settings.vars.frame[index].option |= ENABLE_LED;
+        }else{
+          settings.vars.frame[index].option &= ~ENABLE_LED;
+        }
+      }
+      buff_answer[len_answer] = index;
+      len_answer++;
+    }
+  }else{
+    len_answer=0;
+    for (u8 i=0;i<SETTINGS_PREFIX_SIZE+settings_number*4+1+2;i++){
+      buff_answer[i] = buff[i];
+      len_answer++;
+    }
+    
+  }
+  add_crc16((u8*)buff_answer,len_answer);
+  usb_send_packet((u8*)buff_answer,len_answer+2);
+}
+void settings_read_data(u8* buff){
+  u16 j;
+  u8 settings_number;
+  u8 buff_answer[256],len_answer;
+  u8 index;
+  for (u8 i=0;i<SETTINGS_PREFIX_SIZE;i++){
+    buff_answer[i] = buff[i];
+  }
+  j = SETTINGS_PREFIX_SIZE;
+  settings_number = buff[j];
+  j++;
+  index = buff[j];
+  j++;
+  len_answer = SETTINGS_PREFIX_SIZE;
+  for (u16 i=0;i<settings_number;i++){
+    u8 param_led_transit;
+    u16 param_time;
+    buff_answer[len_answer] = index+i;
+    len_answer++;
+    if((index+i)==UP_TIME_INDEX){
+      param_led_transit = 0;
+      param_time = ((u16)(settings.vars.up_time.hour)&0x00ff)|(((u16)(settings.vars.up_time.min)<<8)&0xff00);
+    }else if((index+i)==DOWN_TIME_INDEX){
+      param_led_transit = 0;
+      param_time = ((u16)(settings.vars.down_time.hour)&0x00ff)|(((u16)(settings.vars.down_time.min)<<8)&0xff00);
+    }else if((index+i) < UP_TIME_INDEX){
+      param_time = settings.vars.frame[index+i].time;
+      if(settings.vars.frame[index+i].option & ENABLE_LED){
+        param_led_transit =1;
+      }else{
+        param_led_transit =0;
+      }
+    }
+    buff_answer[len_answer] = param_led_transit ;
+    len_answer++;
+    buff_answer[len_answer] = param_time;
+    len_answer++;
+    buff_answer[len_answer] = param_time>>8;
+    len_answer++;
+  }
+  add_crc16((u8*)buff_answer,len_answer);
+  usb_send_packet((u8*)buff_answer,len_answer+2);
+}
 
-
+void settings_save_data(u8* buff){
+  u8 buff_answer[256],len_answer;
+  for (u8 i=0;i<SETTINGS_PREFIX_SIZE;i++){
+    buff_answer[i] = buff[i];
+  }
+  len_answer = SETTINGS_PREFIX_SIZE;
+  add_crc16((u8*)buff_answer,len_answer);
+  rewrite_page();
+  usb_send_packet((u8*)buff_answer,len_answer+2);
+}
 
 u16 add_crc16(u8* pck, u16 len){
   u16 crc;
