@@ -121,7 +121,7 @@ u8 frame_control_hadler(void){
                       move_to_right(MAX_MAIN_STEP);
                       suspend_rotate(&motor_one);
                       suspend_rotate(&motor_two);
-                      settings.vars.stop_time = settings.vars.frame[settings.vars.frame_finded].time;
+                      settings.vars.stop_time = settings.vars.frame[settings.vars.frame_finded-1].time;
                       if (settings.vars.stop_time){
                         enable_led();
                       }

@@ -155,7 +155,7 @@ class TestApp(App):
                 for j in range(5):
                     answer = self.send_request(self.ser)
                     answer_str = answer
-                    Logger.info("otvet {0}".format(answer_str))
+                    Logger.info("otvet {0} {1}".format(answer_str,com_available[i]))
                     if answer_str == receive_answer_init:
                         Logger.info("find device on {0}".format(com_available[i]))
                         self.have_serial = 1
@@ -402,7 +402,7 @@ class TestApp(App):
                 month = receive_ord[8]
                 date = receive_ord[10]
                 year = receive_ord[12]
-                frame_number = receive_ord[13] | (receive_ord[14] << 8)
+                frame_number = receive_ord[14] | (receive_ord[15] << 8)
                 self.layout.remove_widget(self.rtc)
                 self.rtc = TextInput(text='current time '+str(hours)+':'+str(minutes)+':'+str(seconds)+'\n'+
                                             'frame number - '+str(frame_number)+'\n')

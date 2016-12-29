@@ -77,7 +77,7 @@ u8 init_frame_struct(u16 frame_number){
     }
     rewrite_page();
   }
-  if (settings.vars.frame_number_saved != frame_number){
+  if ((settings.vars.frame_number_saved != frame_number)&&frame_number){
     settings.vars.frame_number_saved = frame_number;
     rewrite_page();
   }
