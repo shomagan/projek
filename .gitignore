@@ -35,5 +35,6 @@ MDK-ARM/
 EWARM/
 .mxproject
 ide/__pycache__
+exe/
 *.ioc
 ide/*.ini
