@@ -1,6 +1,11 @@
 import io
 
 import six
+import packaging
+import packaging.version
+import packaging.specifiers
+import packaging.requirements
+
 import serial_port
 import serial
 import platform
@@ -28,6 +33,8 @@ from kivy.properties import OptionProperty, ObjectProperty
 
 
 send_request_init = 'Jalisco'
+send_request_init_b = b'Jalisco'
+REQUEST_INIT_SIZE = 7
 receive_answer_init = b'Guadalajara'
 send_request_time = 'how_mach_time'
 MAX_WRITE_SETTINGS = 30
@@ -168,25 +175,25 @@ class TestApp(App):
                 else:
                     self.ser.close()
 
-    def write_time(self, ser):
-        Logger.info("send_request_init {0}".format(send_request_init))
-        ser.reset_input_buffer()
-        ser.write(send_request_init.encode('ascii'))
-        if not self.wind10:
-            ser.timeout = 0.3
-        receive = ser.read(11)
-        self.ser.reset_input_buffer()
-        Logger.info("write time receive {0}".format(receive))
-        return receive
-
     def send_request(self, ser):
         Logger.info("send_request_init {0}".format(send_request_init))
+        send_buff = [i for i in range(REQUEST_INIT_SIZE+2)]
         ser.reset_input_buffer()
-        ser.write(send_request_init.encode('ascii'))
+        for i in range(REQUEST_INIT_SIZE):
+            send_buff[i] = send_request_init_b[i]
+        crc = crc16(send_buff, REQUEST_INIT_SIZE)
+        send_buff[REQUEST_INIT_SIZE] = crc & 0xff
+        send_buff[REQUEST_INIT_SIZE+1] = (crc >> 8) & 0xff
+        ser.write(send_buff)
         if not self.wind10:
             ser.timeout = 0.3
-        receive = ser.read(11)
+        receive = ser.read(13)
         self.ser.reset_input_buffer()
+        ser.write(send_buff)
+        if not self.wind10:
+            ser.timeout = 0.3
+        receive = ser.read(13)
+        receive = receive[:-2]
         Logger.info("recv_request_init {0}".format(receive))
         return receive
 
@@ -225,6 +232,11 @@ class TestApp(App):
         crc = crc16(send_buff, SETTINGS_PREFIX_SIZE+number*4+1)
         send_buff[SETTINGS_PREFIX_SIZE+number*4+1] = crc & 0xff
         send_buff[SETTINGS_PREFIX_SIZE+number*4+1+1] = (crc >> 8) & 0xff
+        self.ser.write(send_buff)
+        if not self.wind10:
+            self.ser.timeout = 0.3
+        receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+number+2)
+        self.ser.reset_input_buffer()
         self.ser.write(send_buff)
         if not self.wind10:
             self.ser.timeout = 0.3
@@ -364,9 +376,17 @@ class TestApp(App):
 
     def save_settings_c(self):
         '''return 1 if ok write'''
-        send_buff = [i for i in range(SETTINGS_PREFIX_SIZE)]
+        send_buff = [i for i in range(SETTINGS_PREFIX_SIZE+2)]
         for i in range(SETTINGS_PREFIX_SIZE):
             send_buff[i] = settings_save_b[i]
+        crc = crc16(send_buff, SETTINGS_PREFIX_SIZE)
+        send_buff[SETTINGS_PREFIX_SIZE] = crc & 0xff
+        send_buff[SETTINGS_PREFIX_SIZE+1] = (crc >> 8) & 0xff
+        self.ser.reset_input_buffer()
+        self.ser.write(send_buff)
+        if not self.wind10:
+            self.ser.timeout = 0.3
+        receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+2)
         self.ser.reset_input_buffer()
         self.ser.write(send_buff)
         if not self.wind10:
