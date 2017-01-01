@@ -177,6 +177,11 @@ void SysTick_Handler(void)
   HAL_IncTick();
   HAL_SYSTICK_IRQHandler();
   /* USER CODE BEGIN SysTick_IRQn 1 */
+  if (uwTick>(speed_control+3)){
+    speed_control= uwTick;  
+    config |= STEP_TIME;
+  }
+  
   config |= TIME_MS;
   /* USER CODE END SysTick_IRQn 1 */
 }

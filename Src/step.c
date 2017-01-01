@@ -78,15 +78,13 @@ u8 step_motor_control(motor_template* motor){
   u32 mask;
   HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_step),GPIO_PIN_RESET);
   if((motor->step_number)&&(motor->awaik)){
-    if(uwTick & 0x01){
-      if (motor->step_state ==0){
-        motor->step_number--;
-        HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_step),GPIO_PIN_SET);
-        motor->step_state =1;
-        motor->tick_from_start++;
-      }else{
-        motor->step_state =0;
-      }
+    if (motor->step_state ==0){
+      motor->step_number--;
+      HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_step),GPIO_PIN_SET);
+      motor->step_state =1;
+      motor->tick_from_start++;
+    }else{
+      motor->step_state =0;
     }
   }else{
     HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_step),GPIO_PIN_RESET);

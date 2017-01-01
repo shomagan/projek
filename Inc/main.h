@@ -52,6 +52,7 @@
 
 /* USER CODE BEGIN Private defines */
 #define TIME_MS (1<<0)
+#define STEP_TIME (1<<1)
 #define BIT(x)  (1<<x)
 #define OPT_ONE GPIO_PIN_5
 #define OPT_TWO GPIO_PIN_6
@@ -110,6 +111,7 @@ extern settings_t settings;
 extern u8 buff_temp[256];
 extern u32 lenta;
 extern u8 config;
+extern u32 speed_control;
 /* USER CODE END Private defines */
 
 /**

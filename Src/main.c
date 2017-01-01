@@ -75,7 +75,7 @@ RTC_DateTypeDef Date;
 settings_t settings;
 u8 buff_temp[256];
 u32 lenta;
-
+u32 speed_control;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -143,12 +143,13 @@ int main(void)
   frame_init();
   u32 timer;
   timer = uwTick;
+  speed_control = uwTick;
   lenta = 1;
   while (1){
     HAL_IWDG_Refresh(&hiwdg);
     frame_control_hadler();
-    if (config & TIME_MS){
-      config &=~TIME_MS;
+    if (config & STEP_TIME){
+      config &=~STEP_TIME;
       step_motor_control(&motor_one);
       step_motor_control(&motor_two);
     }
