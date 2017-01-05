@@ -126,6 +126,8 @@ u8 frame_control_hadler(void){
                       settings.vars.stop_time = settings.vars.frame[settings.vars.frame_finded-1].time;
                       if (settings.vars.stop_time){
                         enable_led();
+                      }else{
+                        settings.vars.stop_time = 1;
                       }
                       time_stoped = uwTick;
                       settings.vars.frame_finded--;
@@ -147,6 +149,8 @@ u8 frame_control_hadler(void){
                       settings.vars.stop_time = settings.vars.frame[settings.vars.frame_finded].time;
                       if (settings.vars.stop_time){
                         enable_led();
+                      }else{
+                        settings.vars.stop_time = 1;
                       }
                       time_stoped = uwTick;
                       settings.vars.frame_finded++;
