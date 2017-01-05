@@ -384,13 +384,9 @@ class TestApp(App):
         send_buff[SETTINGS_PREFIX_SIZE+1] = (crc >> 8) & 0xff
         self.ser.reset_input_buffer()
         self.ser.write(send_buff)
-        if not self.wind10:
-            self.ser.timeout = 0.3
         receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+2)
         self.ser.reset_input_buffer()
         self.ser.write(send_buff)
-        if not self.wind10:
-            self.ser.timeout = 0.3
         receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+2)
         crc = crc16(receive_buff, SETTINGS_PREFIX_SIZE)
         crc_r = receive_buff[SETTINGS_PREFIX_SIZE] | (receive_buff[SETTINGS_PREFIX_SIZE+1] << 8)

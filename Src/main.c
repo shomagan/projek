@@ -76,6 +76,7 @@ settings_t settings;
 u8 buff_temp[256];
 u32 lenta;
 u32 speed_control;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -87,6 +88,7 @@ static void MX_RTC_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_USART1_UART_Init(void);
+static u8 work_time(void);
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
                                 
@@ -147,7 +149,9 @@ int main(void)
   lenta = 1;
   while (1){
     HAL_IWDG_Refresh(&hiwdg);
-    frame_control_hadler();
+    if (settings.vars.state!=STOPED_TIME){
+      frame_control_hadler();
+    }
     if (config & STEP_TIME){
       config &=~STEP_TIME;
       step_motor_control(&motor_one);
@@ -162,6 +166,18 @@ int main(void)
       settings.vars.usb_tranceiver_state &= ~USB_RECIVE_OR_TRANSMIT_PACKET;
       receive_packet_hanling(UserRxBufferFS);
     }
+    if (config & SECOND){
+      config &= ~SECOND;
+      if ((work_time()==0) && (settings.vars.state!=STOPED_TIME)){
+        settings.vars.state=STOPED_TIME;
+        stop_rotate(&motor_one);
+        stop_rotate(&motor_two);
+        disable_led();
+      }else if(work_time()&&(settings.vars.state==STOPED_TIME)){
+        break_to_init();
+      }
+    }
+    
     HAL_RTC_GetTime(&hrtc, &Time, RTC_FORMAT_BCD);
     HAL_RTC_GetDate(&hrtc, &Date, RTC_FORMAT_BCD);
   }
@@ -450,6 +466,37 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+u8 work_time(void){
+  RTC_TimeTypeDef sTime;
+  u16 min_up,min_down,min_current;
+  min_up = settings.vars.up_time.hour*60+settings.vars.up_time.min;
+  min_down = settings.vars.down_time.hour*60+settings.vars.down_time.min;
+  if(HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN)== HAL_OK){
+    min_current = sTime.Hours*60+sTime.Minutes;
+  }else{
+    min_current = 1442;
+  }
+  if ((min_up>1440)||(min_down>1440)||(min_current>1440)){
+    return 1;
+  }else{
+    if (min_up>min_down){
+      if ((min_current >= min_up)||(min_current < min_down)){
+        return 1;
+      }else{
+        return 0;
+      }
+    }else if(min_up<min_down){
+      if ((min_current >= min_up)&&(min_current < min_down)){
+        return 1;
+      }else{
+        return 0;
+      }
+    }else{
+      return 1;
+    }
+  }
+}
+
 
 /* USER CODE END 4 */
 

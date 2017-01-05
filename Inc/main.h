@@ -53,6 +53,7 @@
 /* USER CODE BEGIN Private defines */
 #define TIME_MS (1<<0)
 #define STEP_TIME (1<<1)
+#define SECOND (1<<2)
 #define BIT(x)  (1<<x)
 #define OPT_ONE GPIO_PIN_5
 #define OPT_TWO GPIO_PIN_6
@@ -79,7 +80,8 @@ typedef union{
     u16 state;
 #define INIT_STATE 1    
 #define WORK_STATE 2    
-#define NO_STATE   3    
+#define NO_STATE   3
+#define STOPED_TIME   4    
     u16 init_state;
 #define SEARCH_START  BIT(0)
 #define CHECK_FRAME  BIT(1)

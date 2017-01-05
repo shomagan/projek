@@ -23,10 +23,15 @@ static void settings_write_data(u8* buff);
 extern RTC_HandleTypeDef hrtc;
 
 u8 receive_packet_hanling(u8* buff){
-  u8 nruter;
+  u8 nruter,i;
+  u8 temp_buff[13];
   nruter =0;
   if (strncmp((char*)init_receive, (char*)buff,sizeof(init_receive)-1)==0){
-    usb_send_packet((u8*)init_send, sizeof(init_send)-1);
+    for (i=0;i<11;i++){
+      temp_buff[i] = init_send[i];
+    }
+    add_crc16((u8*)temp_buff,11);
+    usb_send_packet((u8*)temp_buff,13);
   }else if(strncmp((char*)how_time, (char*)buff,sizeof(how_time)-1)==0){
     time_answer();
   }else if(strncmp((char*)set_time, (char*)buff,sizeof(set_time)-1)==0){

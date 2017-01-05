@@ -26,9 +26,7 @@ u8 move_to_left(u16 step);
 u8 move_to_right(u16 step);
 u8 stretch(u16 step);
 u8 stop_move();
-u8 break_to_init();
-u8 enable_led();
-u8 disable_led();
+
 
 
 
@@ -73,7 +71,7 @@ u8 frame_control_hadler(void){
             }
           }else if (settings.vars.init_state & CHECK_FRAME){
             if (settings.vars.init_state & STARTED){
-              if (rising_full()){
+              if (rising_full()&&(motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-10))){
                 settings.vars.init_state &= ~CHECK_FRAME;
                 settings.vars.init_state &= ~START_POSITON;
                 settings.vars.init_state &= ~STARTED;
@@ -82,7 +80,7 @@ u8 frame_control_hadler(void){
                 stop_move();
                 settings.vars.state = WORK_STATE;
                 init_frame_struct(settings.vars.frame_finded);
-              }else if (rising_only_opt(MIDLE_PARA)){
+              }else if (rising_only_opt(MIDLE_PARA)&&(motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-10))){
                 settings.vars.stop_time = 1;
                 time_stoped = uwTick;
                 move_to_left(MAX_MAIN_STEP );
@@ -99,21 +97,25 @@ u8 frame_control_hadler(void){
         case WORK_STATE:
             if (settings.vars.init_state & STARTED){
               if (rising_full()){
-                if (settings.vars.move_state == MOVE_TO_RIGHT){
+                if ((settings.vars.move_state == MOVE_TO_RIGHT)&&
+                  (motor_one.step_number<(MAX_MAIN_STEP-STRETCH_STEP))){
                   settings.vars.init_state |= START_POSITON;
                   settings.vars.frame_finded = 0;
                   move_to_left(MAX_MAIN_STEP);
-                }else{
+                  settings.vars.stop_time = 1;
+                  time_stoped = uwTick;
+                  settings.vars.state = WORK_STATE;
+                }else if(motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP)){
                   if (settings.vars.frame_finded != settings.vars.frame_number_saved){
                     break_to_init();
                   }else{
                     settings.vars.init_state &= ~START_POSITON;
                     move_to_right(MAX_MAIN_STEP);
                   }
+                  settings.vars.stop_time = 1;
+                  time_stoped = uwTick;
+                  settings.vars.state = WORK_STATE;
                 }
-                settings.vars.stop_time = 1;
-                time_stoped = uwTick;
-                settings.vars.state = WORK_STATE;
               }else{
                 if (settings.vars.move_state == MOVE_TO_RIGHT){
                   if (settings.vars.init_state & STRETCH){
