@@ -385,16 +385,13 @@ class TestApp(App):
         self.ser.reset_input_buffer()
         self.ser.write(send_buff)
         receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+2)
-        self.ser.reset_input_buffer()
-        self.ser.write(send_buff)
-        receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+2)
         crc = crc16(receive_buff, SETTINGS_PREFIX_SIZE)
         crc_r = receive_buff[SETTINGS_PREFIX_SIZE] | (receive_buff[SETTINGS_PREFIX_SIZE+1] << 8)
         if crc == crc_r and len(receive_buff) == SETTINGS_PREFIX_SIZE+2:
-            Logger.info("crc mtch: {0}, {1}".format(crc, crc_r))
+            Logger.info("crc mtch: {0}, {1},settings save".format(crc, crc_r))
             return 1
         else:
-            Logger.info("crc mismatch: {0}, {1}".format(crc, crc_r))
+            Logger.info("crc mismatch: {0},settings not save, {1}".format(crc, crc_r))
             return 0
 
     def read_time(self, ser):
