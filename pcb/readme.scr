@@ -1,0 +1,6 @@
+DISPLAY ALL
+RATSNEST
+DISPLAY None
+DISPLAY Top Bottom Pads Vias 
+EXPORT IMAGE D:\_camlea\eagle_export.png MONOCHROME 600;
+DISPLAY Top Unrouted Dimension tPlace bPlace 
