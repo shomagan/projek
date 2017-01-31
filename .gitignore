@@ -37,4 +37,5 @@ EWARM/
 ide/__pycache__
 exe/
 *.ioc
+*.png
 ide/*.ini
