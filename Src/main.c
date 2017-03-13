@@ -9,12 +9,15 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f1xx_hal.h"
-#include "usb_device.h"
-#include "usbd_cdc_if.h"
 #include "step.h"
 #include "saver.h"
 #include "frame_control.h"
 #include "data_transfer.h"
+#include "hw_config.h"
+#include "usb_lib.h"
+#include "usb_desc.h"
+#include "usb_pwr.h"
+
 
 
 /* USER CODE BEGIN Includes */
@@ -65,6 +68,13 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+extern __IO uint8_t Receive_Buffer[64];
+extern __IO  uint32_t Receive_length ;
+extern __IO  uint32_t length ;
+uint8_t Send_Buffer[64];
+uint32_t packet_sent=1;
+uint32_t packet_receive=1;
+
 
 /* USER CODE END 0 */
 
@@ -87,7 +97,9 @@ int main(void)
   MX_IWDG_Init();
   MX_RTC_Init();
   MX_TIM1_Init();
-  MX_USB_DEVICE_Init();
+  USB_Interrupts_Config();
+  USB_Init();
+
   MX_ADC2_Init();
   MX_USART1_UART_Init();
   init_frame_struct(0);
@@ -127,11 +139,25 @@ int main(void)
     if(uwTick>(timer+1000)){
       timer = uwTick;
     }
-    if (settings.vars.usb_tranceiver_state & USB_RECIVE_OR_TRANSMIT_PACKET){
-      //change_rotate(800,&motor_two);
+
+    if (bDeviceState == CONFIGURED){
+      CDC_Receive_DATA();
+      /*Check to see if we have data yet */
+      if (Receive_length  != 0){
+//        receive_packet_hanling(Receive_Buffer);
+        Receive_length = 0;
+        if (packet_sent == 1){
+          CDC_Send_DATA ((unsigned char*)Receive_Buffer,Receive_length);
+        }
+
+      }
+    }
+/*    if (settings.vars.usb_tranceiver_state & USB_RECIVE_OR_TRANSMIT_PACKET){
       settings.vars.usb_tranceiver_state &= ~USB_RECIVE_OR_TRANSMIT_PACKET;
       receive_packet_hanling(UserRxBufferFS);
-    }
+    }*/
+
+
     if (config & SECOND){
       config &= ~SECOND;
       if ((work_time()==0) && (settings.vars.state!=STOPED_TIME)){

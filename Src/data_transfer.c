@@ -46,12 +46,10 @@ u8 receive_packet_hanling(u8* buff){
   return nruter;
 }
 u8 usb_send_packet(u8* buff,u16 len){
-  static u8 tx_buff[256];
-  for(u16 i =0;i<len;i++){
-    UserTxBufferFS[i] = buff[i];
+  if (packet_sent == 1){
+    CDC_Send_DATA ((unsigned char*)Receive_Buffer,Receive_length);
   }
   settings.vars.usb_tranceiver_state |= USB_TRANSMIT_PACKET;
-  CDC_Transmit_FS((u8*)UserTxBufferFS, len);
   return 0x00;
 }
 void time_answer(void){
