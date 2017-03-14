@@ -41,7 +41,7 @@
   #error "Missing define: USE_STM32L152_EVAL or USE_STM32L152D_EVAL"
  #endif /* USE_STM32L152_EVAL */
 #elif defined (STM32F10X_MD) || defined (STM32F10X_HD) || defined (STM32F10X_XL)
- #include "stm32f10x.h"
+ #include "stm32f1xx.h"
  #if defined (USE_STM3210B_EVAL)
   #include "stm3210b_eval.h"
  #elif defined (USE_STM3210E_EVAL)
@@ -63,11 +63,11 @@
    used to run the example */
 #if !defined (USE_STM3210B_EVAL) &&  !defined (USE_STM3210E_EVAL)  && !defined (USE_STM32L152_EVAL) &&  !defined (USE_STM32L152D_EVAL) &&  !defined (USE_STM32373C_EVAL) &&  !defined (USE_STM32303C_EVAL)
 //#define USE_STM3210B_EVAL
-//#define USE_STM3210E_EVAL
+#define USE_STM3210E_EVAL
 //#define USE_STM32L152_EVAL
 //#define USE_STM32L152D_EVAL
 //#define (USE_STM32373C_EVAL)
-#define (USE_STM32303C_EVAL)
+//#define (USE_STM32303C_EVAL)
 #endif
 
 

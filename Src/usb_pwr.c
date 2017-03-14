@@ -65,8 +65,6 @@ RESULT PowerOn(void)
 {
   uint16_t wRegVal;
 
-  /*** cable plugged-in ? ***/
-  USB_Cable_Config(ENABLE);
 
   /*** CNTR_PWDN = 0 ***/
   wRegVal = CNTR_FRES;
@@ -97,8 +95,7 @@ RESULT PowerOff()
   _SetCNTR(CNTR_FRES);
   /* clear interrupt status register */
   _SetISTR(0);
-  /* Disable the Pull-Up*/
-  USB_Cable_Config(DISABLE);
+  
   /* switch-off device */
   _SetCNTR(CNTR_FRES + CNTR_PDWN);
   /* sw variables reset */
@@ -169,7 +166,7 @@ void Suspend(void)
 	/* Clear PDDS and LPDS bits */
 	tmpreg &= ((uint32_t)0xFFFFFFFC);
 	/* Set LPDS bit according to PWR_Regulator value */
-	tmpreg |= PWR_Regulator_LowPower;
+	tmpreg |= 0x00000001;
 	/* Store the new value */
 	PWR->CR = tmpreg;
 	/* Set SLEEPDEEP bit of Cortex System Control Register */

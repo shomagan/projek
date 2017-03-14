@@ -90,6 +90,7 @@
   */
 
 #ifdef HAL_RCC_MODULE_ENABLED
+//static const uint8_t APBPrescTable[8] =  {0, 0, 0, 0, 1, 2, 3, 4};
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/

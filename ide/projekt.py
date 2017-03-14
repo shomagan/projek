@@ -220,7 +220,13 @@ class TestApp(App):
                 led = 0
             else:
                 time_sec = int(self.config.get('Frame'+str(index+i+1), 'time_sec'))
-                led = int(self.config.get('Frame'+str(index+i+1), 'led'))
+                led_ans =  self.config.get('Frame'+str(index+i+1), 'led')
+                if led_ans=='False':
+                  led = 0
+                elif led_ans=='True':
+                  led = 1
+                else:
+                  led = int(led_ans)
             send_buff[send_len] = led & 0xff
             send_len += 1
             send_buff[send_len] = time_sec & 0xff
@@ -232,11 +238,6 @@ class TestApp(App):
         crc = crc16(send_buff, SETTINGS_PREFIX_SIZE+number*4+1)
         send_buff[SETTINGS_PREFIX_SIZE+number*4+1] = crc & 0xff
         send_buff[SETTINGS_PREFIX_SIZE+number*4+1+1] = (crc >> 8) & 0xff
-        self.ser.write(send_buff)
-        if not self.wind10:
-            self.ser.timeout = 0.3
-        receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+number+2)
-        self.ser.reset_input_buffer()
         self.ser.write(send_buff)
         if not self.wind10:
             self.ser.timeout = 0.3
@@ -302,11 +303,6 @@ class TestApp(App):
         if not self.wind10:
             self.ser.timeout = 0.4
         receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+number*4+2)
-        self.ser.reset_input_buffer()
-        self.ser.write(send_buff)
-        if not self.wind10:
-            self.ser.timeout = 0.4
-        receive_buff = self.ser.read(SETTINGS_PREFIX_SIZE+number*4+2)
         Logger.info("read settings {0}".format(receive_buff))
         if len(receive_buff) == SETTINGS_PREFIX_SIZE+number*4+2:
             crc = crc16(receive_buff, SETTINGS_PREFIX_SIZE+number*4)
@@ -358,19 +354,37 @@ class TestApp(App):
                 return 0
             return 1
         else:
+            Logger.info("read length error, length -  {0}".format(receive_buff))
             return 0
 
     def read_settings(self):
         ''' read all settings '''
         if self.have_serial:
-            if self.read_settings_c(0, 30):
-                Logger.info("good read settings: {0}, {1}".format(0, 30))
-            if self.read_settings_c(30, 30):
-                Logger.info("good read settings: {0}, {1}".format(30, 30))
-            if self.read_settings_c(60, 30):
-                Logger.info("good read settings: {0}, {1}".format(60, 30))
-            if self.read_settings_c(90, 30):
-                Logger.info("good read settings: {0}, {1}".format(90, 30))
+            if self.read_settings_c(0, 10):
+                Logger.info("good read settings: {0}, {1}".format(0, 10))
+            if self.read_settings_c(10, 10):
+                Logger.info("good read settings: {0}, {1}".format(10, 10))
+            if self.read_settings_c(20, 10):
+                Logger.info("good read settings: {0}, {1}".format(20, 10))
+            if self.read_settings_c(30, 10):
+                Logger.info("good read settings: {0}, {1}".format(30, 10))
+            if self.read_settings_c(40, 10):
+                Logger.info("good read settings: {0}, {1}".format(40, 10))
+            if self.read_settings_c(50, 10):
+                Logger.info("good read settings: {0}, {1}".format(50, 10))
+            if self.read_settings_c(60, 10):
+                Logger.info("good read settings: {0}, {1}".format(60, 10))
+            if self.read_settings_c(70, 10):
+                Logger.info("good read settings: {0}, {1}".format(70, 10))
+            if self.read_settings_c(80, 10):
+                Logger.info("good read settings: {0}, {1}".format(80, 10))
+            if self.read_settings_c(90, 10):
+                Logger.info("good read settings: {0}, {1}".format(90, 10))
+            if self.read_settings_c(100, 10):
+                Logger.info("good read settings: {0}, {1}".format(100, 10))
+            if self.read_settings_c(110, 10):
+                Logger.info("good read settings: {0}, {1}".format(110, 10))
+
         return 0
 
 

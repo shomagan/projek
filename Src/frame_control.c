@@ -1,6 +1,5 @@
 #include "frame_control.h"
 #include "stm32f1xx_hal.h"
-#include "usb_device.h"
 #include "step.h"
 #include "saver.h"
 /*#define OPT_ONE GPIO_PIN_5

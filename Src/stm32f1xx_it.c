@@ -35,8 +35,9 @@
 #include "stm32f1xx.h"
 #include "stm32f1xx_it.h"
 #include "main.h"
-#include "usb_device.h"
-#include "usbd_cdc_if.h"
+#include "hw_config.h"
+#include "usb_lib.h"
+#include "usb_istr.h"
 
 
 /* USER CODE BEGIN 0 */

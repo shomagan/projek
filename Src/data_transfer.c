@@ -1,11 +1,9 @@
 #include "data_transfer.h"
 #include "stm32f1xx_hal.h"
-#include "usb_device.h"
-#include "usbd_cdc_if.h"
 #include "step.h"
 #include "saver.h"
 #include "frame_control.h"
-#include "usbd_cdc_if.h"
+#include "hw_config.h"
 char init_send[] = "Guadalajara";
 char const init_receive[] = "Jalisco";
 char how_time[]  = "how_mach_time";
@@ -21,6 +19,11 @@ static void settings_save_data(u8* buff);
 static void settings_read_data(u8* buff);
 static void settings_write_data(u8* buff);
 extern RTC_HandleTypeDef hrtc;
+
+extern __IO uint32_t packet_sent;
+extern __IO uint32_t packet_receive;
+extern __IO uint8_t Receive_Buffer[64];
+
 
 u8 receive_packet_hanling(u8* buff){
   u8 nruter,i;
@@ -47,7 +50,7 @@ u8 receive_packet_hanling(u8* buff){
 }
 u8 usb_send_packet(u8* buff,u16 len){
   if (packet_sent == 1){
-    CDC_Send_DATA ((unsigned char*)Receive_Buffer,Receive_length);
+    CDC_Send_DATA ((unsigned char*)buff,len);
   }
   settings.vars.usb_tranceiver_state |= USB_TRANSMIT_PACKET;
   return 0x00;
