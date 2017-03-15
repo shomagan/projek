@@ -32,7 +32,6 @@ HAL_StatusTypeDef FLASH_ErasePage(uint32_t Page_Address){
 }
 HAL_StatusTypeDef flash_program_u16(uint32_t Address, uint16_t Data){
   HAL_StatusTypeDef status = HAL_OK;
-  uint32_t tmp = 0;
   /* Check the parameters */
   assert_param(IS_FLASH_ADDRESS(Address));
   /* Wait for last operation to be completed */
@@ -81,6 +80,7 @@ u8 init_frame_struct(u16 frame_number){
     settings.vars.frame_number_saved = frame_number;
     rewrite_page();
   }
+  return 1;
 }
 u8 rewrite_page(){
     u16* p_struct;
@@ -92,6 +92,7 @@ u8 rewrite_page(){
     for (u16 i =0;i<476;i++){
       flash_program_u16(WRITABLE_FLASH_PAGE+i*2, p_struct[i]);
     }
+    return 1;
 }
 /*
        (settings.vars.down_time.hour>25)||

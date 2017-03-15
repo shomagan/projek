@@ -31,9 +31,11 @@ u8 start_rotate(u8 rotate_vector,u32 step_number,motor_template* motor){
     }else{
       HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_dir),GPIO_PIN_SET);
     }
+    return 1;
   }else{
     motor->dir_state = 2;
     HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_sleep),GPIO_PIN_RESET);
+    return 0;
   }
 
 }
@@ -52,30 +54,29 @@ u8 change_rotate(u32 step_number,motor_template* motor){
     motor->dir_state = 2;
     HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_sleep),GPIO_PIN_RESET);
   }
-
+  return 1;
 }
 
 u8 stop_rotate(motor_template* motor){
   motor->dir_state= 2;//stop
   motor->step_number =0;
   HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_sleep),GPIO_PIN_RESET);//hh
+  return 1;
 }
 u8 suspend_rotate(motor_template* motor){
   HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_sleep),GPIO_PIN_SET);//hh
   motor->awaik =0;
+  return 1;
 }
 u8 awaik_rotate(motor_template* motor){
   if(motor->step_number ==0){
     HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_sleep),GPIO_PIN_RESET);//hh
   }
   motor->awaik =1;
+  return 1;
 }
 
 u8 step_motor_control(motor_template* motor){
-/*  u16 aqsel_time;
-  u8 dir_state;
-  u8 step_state;*/
-  u32 mask;
   HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_step),GPIO_PIN_RESET);
   if((motor->step_number)&&(motor->awaik)){
     if (motor->step_state ==0){
@@ -89,6 +90,7 @@ u8 step_motor_control(motor_template* motor){
   }else{
     HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_step),GPIO_PIN_RESET);
   }
+  return 1;
 
 }
 

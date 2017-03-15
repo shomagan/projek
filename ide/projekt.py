@@ -77,7 +77,7 @@ class FloatInput(TextInput):
 
 
 class TestApp(App):
-    display_type = OptionProperty('normal', options=['normal', 'popup'])
+    display_type = OptionProperty('normal', options=['normal','popup'])
     connect_status = CheckBox(active=False, group="money")
     rtc = TextInput(text='0:0:0')
     layout = GridLayout()
@@ -95,24 +95,24 @@ class TestApp(App):
             self.wind10 = False
 
         self.layout.cols = 2
-        find_button = Button(text='Find device')
+        find_button = Button(text='подключить')
         find_button.size_hint_x = None
         find_button.bind(on_press=lambda j: self.find_device())
         self.connect_status = CheckBox(active=False, group="money")
-        self.rtc = TextInput(text='current time 0:0:0 \n')
-        read_time_button = Button(text='read time')
+        self.rtc = TextInput(text='текущее время 0:0:0 \n')
+        read_time_button = Button(text='прочитать время')
         read_time_button.size_hint_x = None
         read_time_button.bind(on_press=lambda j: self.read_time(self.ser))
-        sync_time_button = Button(text='sync time')
+        sync_time_button = Button(text='синхронизировать время')
         sync_time_button.size_hint_x = None
         sync_time_button.bind(on_press=lambda j: self.sync_time(self.ser))
-        change_settings_button = Button(text='change_settings')
+        change_settings_button = Button(text='редактировать настройки')
         change_settings_button.size_hint_x = None
-        change_settings_button.bind(on_release=lambda j: App.open_settings(self))
-        write_settings_button = Button(text='write_settings')
+        change_settings_button.bind(on_press=lambda j: App.open_settings(self))
+        write_settings_button = Button(text='записать настройки')
         write_settings_button.size_hint_x = None
         write_settings_button.bind(on_press=lambda j: self.write_settings())
-        read_settings_button = Button(text='read_settings')
+        read_settings_button = Button(text='прочитать настройки')
         read_settings_button.size_hint_x = None
         read_settings_button.bind(on_press=lambda j: self.read_settings())
         self.layout.add_widget(find_button)
@@ -483,6 +483,7 @@ class TestApp(App):
         """
         Logger.info("main.py: App.close_settings: {0}".format(settings))
         super(TestApp, self).close_settings(settings)
+        super(TestApp, self).destroy_settings()
 
 
 class MySettingsWithTabbedPanel(SettingsWithTabbedPanel):

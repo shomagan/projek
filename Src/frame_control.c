@@ -311,9 +311,11 @@ u8 rising_full(){
 }
 u8 enable_led(){
   HAL_GPIO_WritePin(GPIOA, BIT(4), GPIO_PIN_RESET);//led enable
+  return 1;
 }
 u8 disable_led(){
   HAL_GPIO_WritePin(GPIOA, BIT(4), GPIO_PIN_SET);//led disable
+  return 1;
 }
 
 u8 get_opt_mask(){
@@ -334,4 +336,5 @@ u8 get_opt_mask(){
   }else{
     opt_state &=~0x04;
   }
+  return 1;
 }
