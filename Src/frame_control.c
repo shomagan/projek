@@ -12,7 +12,7 @@ static u16 shift_step;
 #define LEFT_PARA 0x01
 #define MIDLE_PARA 0x02
 #define RIGHT_PARA 0x04
-#define STRETCH_STEP 55
+#define STRETCH_STEP 36
 #define MAX_MAIN_STEP 1200
 u8 rising_only_opt(u8 para_number);
 u8 rising_opt(u8 para_number);
@@ -70,7 +70,7 @@ u8 frame_control_hadler(void){
             }
           }else if (settings.vars.init_state & CHECK_FRAME){
             if (settings.vars.init_state & STARTED){
-              if (rising_full()&&(motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-10))){
+              if (rising_full()&&(motor_two.step_number<(MAX_MAIN_STEP-10))){
                 settings.vars.init_state &= ~CHECK_FRAME;
                 settings.vars.init_state &= ~START_POSITON;
                 settings.vars.init_state &= ~STARTED;
@@ -79,7 +79,7 @@ u8 frame_control_hadler(void){
                 stop_move();
                 settings.vars.state = WORK_STATE;
                 init_frame_struct(settings.vars.frame_finded);
-              }else if (rising_only_opt(MIDLE_PARA)&&(motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-10))){
+              }else if (rising_only_opt(MIDLE_PARA)&&(motor_two.step_number<(MAX_MAIN_STEP-10))){
                 settings.vars.stop_time = 1;
                 time_stoped = uwTick;
                 move_to_left(MAX_MAIN_STEP );
@@ -118,7 +118,7 @@ u8 frame_control_hadler(void){
               }else{
                 if (settings.vars.move_state == MOVE_TO_RIGHT){
                   if (settings.vars.init_state & STRETCH){
-                    if(motor_two.step_number == 0){
+                    if(motor_two.step_number == 0||rising_only_opt(MIDLE_PARA)){
                       move_to_right(MAX_MAIN_STEP);
                       suspend_rotate(&motor_one);
                       suspend_rotate(&motor_two);
@@ -132,7 +132,7 @@ u8 frame_control_hadler(void){
                       settings.vars.frame_finded--;
                     }
                   }else{
-                    if (rising_only_opt(MIDLE_PARA)&&
+                    if (rising_only_opt(LEFT_PARA)&&
                         (motor_one.step_number<(MAX_MAIN_STEP-STRETCH_STEP-10))){
                       stretch(STRETCH_STEP);
                     }else if(motor_one.step_number==0){
@@ -141,7 +141,7 @@ u8 frame_control_hadler(void){
                   }
                 }else{
                   if (settings.vars.init_state & STRETCH){
-                    if(motor_one.step_number == 0){
+                    if(motor_one.step_number == 0||rising_only_opt(MIDLE_PARA)){
                       move_to_left(MAX_MAIN_STEP);
                       suspend_rotate(&motor_one);
                       suspend_rotate(&motor_two);
@@ -155,7 +155,7 @@ u8 frame_control_hadler(void){
                       settings.vars.frame_finded++;
                     }
                   }else{
-                    if (rising_only_opt(MIDLE_PARA) &&
+                    if (rising_only_opt(RIGHT_PARA) &&
                         (motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-10))){
                       stretch(STRETCH_STEP);
                     }else if(motor_two.step_number==0){

@@ -181,7 +181,7 @@ void SysTick_Handler(void){
   }
   /* USER CODE BEGIN SysTick_IRQn 1 */
   if(settings.vars.init_state & STRETCH){
-    step_count = 8;
+    step_count = 14;
   }else{
     step_count = 4;
   }
