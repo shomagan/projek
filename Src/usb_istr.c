@@ -29,7 +29,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "usb_lib.h"
 #include "usb_prop.h"
-#include "usb_pwr.h"
+
 #include "usb_istr.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -78,9 +78,7 @@ void USB_Istr(void)
 {
     uint32_t i=0;
  __IO uint32_t EP[8];
-  
   wIstr = _GetISTR();
-
 #if (IMR_MSK & ISTR_SOF)
   if (wIstr & ISTR_SOF & wInterrupt_Mask)
   {

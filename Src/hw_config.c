@@ -31,13 +31,15 @@
 #include "usb_prop.h"
 #include "usb_desc.h"
 #include "hw_config.h"
-#include "usb_pwr.h"
+
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 ErrorStatus HSEStartUpStatus;
+__IO uint32_t bDeviceState = UNCONNECTED; /* USB device status */
+
 //EXTI_InitTypeDef EXTI_InitStructure;
 extern __IO uint32_t packet_sent;
 extern __IO uint8_t Send_Buffer[VIRTUAL_COM_PORT_DATA_SIZE] ;

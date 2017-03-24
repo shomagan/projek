@@ -47,7 +47,7 @@
  #elif defined (USE_STM3210E_EVAL)
   #include "stm3210e_eval.h"
  #else
-  #error "Missing define: USE_STM3210B_EVAL or USE_STM3210E_EVAL"
+//  #error "Missing define: USE_STM3210B_EVAL or USE_STM3210E_EVAL"
  #endif /* USE_STM3210B_EVAL */
 #elif defined (USE_STM32373C_EVAL)
  #include "stm32f37x.h"

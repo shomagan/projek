@@ -170,8 +170,8 @@ void PendSV_Handler(void)
 /**
 * @brief This function handles System tick timer.
 */
-void SysTick_Handler(void)
-{
+void SysTick_Handler(void){
+  u8 step_count;
   /* USER CODE BEGIN SysTick_IRQn 0 */
 
   /* USER CODE END SysTick_IRQn 0 */
@@ -179,9 +179,14 @@ void SysTick_Handler(void)
   if (uwTick==0){
     speed_control = 0;
   }
-  HAL_SYSTICK_IRQHandler();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-  if (uwTick>(speed_control+4)){
+  if(settings.vars.init_state & STRETCH){
+    step_count = 8;
+  }else{
+    step_count = 4;
+  }
+    
+  if (uwTick>(speed_control+step_count)){
     speed_control= uwTick;  
     config |= STEP_TIME;
   }

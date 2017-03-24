@@ -12,7 +12,7 @@ static u16 shift_step;
 #define LEFT_PARA 0x01
 #define MIDLE_PARA 0x02
 #define RIGHT_PARA 0x04
-#define STRETCH_STEP 25
+#define STRETCH_STEP 55
 #define MAX_MAIN_STEP 1200
 u8 rising_only_opt(u8 para_number);
 u8 rising_opt(u8 para_number);
@@ -336,5 +336,5 @@ u8 get_opt_mask(){
   }else{
     opt_state &=~0x04;
   }
-  return 1;
+  return opt_state;
 }
