@@ -1,22 +1,21 @@
 #include "saver.h"
 #include "data_transfer.h"
 
-
-HAL_StatusTypeDef save_settings(){
+StatusTypeDef save_settings(){
     HAL_FLASH_OB_Unlock();
     HAL_FLASH_Unlock();
     return FLASH_ErasePage(WRITABLE_FLASH_PAGE);
 }
 
-HAL_StatusTypeDef FLASH_ErasePage(uint32_t Page_Address){
-  HAL_StatusTypeDef status = HAL_OK;
+StatusTypeDef FLASH_ErasePage(uint32_t Page_Address){
+  StatusTypeDef status = STATUS_OK;
   /* Check the parameters */
   assert_param(IS_FLASH_ADDRESS(Page_Address));
 
   /* Wait for last operation to be completed */
   status = FLASH_WaitForLastOperation((uint32_t)FLASH_TIMEOUT_VALUE);
   
-  if(status == HAL_OK){ 
+  if(status == STATUS_OK){ 
     /* if the previous operation is completed, proceed to erase the page */
     FLASH->CR|= CR_PER_Set;
     FLASH->AR = Page_Address; 
@@ -30,13 +29,13 @@ HAL_StatusTypeDef FLASH_ErasePage(uint32_t Page_Address){
   /* Return the Erase Status */
   return status;
 }
-HAL_StatusTypeDef flash_program_u16(uint32_t Address, uint16_t Data){
-  HAL_StatusTypeDef status = HAL_OK;
+StatusTypeDef  flash_program_u16(uint32_t Address, uint16_t Data){
+  StatusTypeDef  status = STATUS_OK;
   /* Check the parameters */
   assert_param(IS_FLASH_ADDRESS(Address));
   /* Wait for last operation to be completed */
   status = FLASH_WaitForLastOperation((uint32_t)FLASH_TIMEOUT_VALUE);
-  if(status == HAL_OK){
+  if(status == STATUS_OK){
     /* if the previous operation is completed, proceed to program the new first 
     half word */
     FLASH->CR |= CR_PG_Set;
@@ -62,7 +61,6 @@ u8 init_frame_struct(u16 frame_number){
     settings.vars.up_time.hour = 25;
     settings.vars.down_time.min = 0;
     settings.vars.up_time.min  = 0;
-
     for (u16 i=0;i<118;i++){
       if (i<frame_number){
         settings.vars.frame[i].option = 0;

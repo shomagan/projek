@@ -1,4 +1,12 @@
 #include "stm32f1xx_hal.h"
+typedef enum 
+{
+  STATUS_OK       = 0x00,
+  STATUS_ERROR    = 0x01,
+  STATUS_BUSY     = 0x02,
+  STATUS_TIMEOUT  = 0x03
+} StatusTypeDef;
+
 #define FLASH_OFSSET 0x08000000
 #define PAGE_FOR_WRITE 63
 #define FLASH_SIZE_PAGE 1024
@@ -17,7 +25,7 @@
 #define CR_STRT_Set              ((uint32_t)0x00000040)
 #define CR_LOCK_Set              ((uint32_t)0x00000080)
 
-HAL_StatusTypeDef FLASH_ErasePage(uint32_t Page_Address);
-HAL_StatusTypeDef flash_program_u16(uint32_t Address, uint16_t Data);
+StatusTypeDef FLASH_ErasePage(uint32_t Page_Address);
+StatusTypeDef flash_program_u16(uint32_t Address, uint16_t Data);
 u8 init_frame_struct(u16 frame_number);
 u8 rewrite_page(void);

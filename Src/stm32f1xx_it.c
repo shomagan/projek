@@ -181,9 +181,9 @@ void SysTick_Handler(void){
   }
   /* USER CODE BEGIN SysTick_IRQn 1 */
   if(settings.vars.init_state & STRETCH){
-    step_count = 14;
+    step_count = 10;
   }else{
-    step_count = 4;
+    step_count = 3;
   }
     
   if (uwTick>(speed_control+step_count)){

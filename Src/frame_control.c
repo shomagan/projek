@@ -2,219 +2,199 @@
 #include "stm32f1xx_hal.h"
 #include "step.h"
 #include "saver.h"
-/*#define OPT_ONE GPIO_PIN_5
+/*
+#define OPT_ONE GPIO_PIN_5
 #define OPT_TWO GPIO_PIN_6
 #define OPT_THREE GPIO_PIN_7
 */
 static u8 opt_old;
 static u8 opt;  
 static u16 shift_step;  
+static u32 time_stoped;
 #define LEFT_PARA 0x01
 #define MIDLE_PARA 0x02
 #define RIGHT_PARA 0x04
-#define STRETCH_STEP 36
-#define MAX_MAIN_STEP 1200
+#define STRETCH_STEP 30
+#define MAX_MAIN_STEP 1600
+#define STEP_FOR_MEMORY_STATE 80
+
 u8 rising_only_opt(u8 para_number);
 u8 rising_opt(u8 para_number);
-u8 rising_midle_opt_after_left();
-u8 rising_midle_opt_after_right();
-u8 rising_left_after_two_right();
-u8 rising_right_after_two_left();
 u8 rising_full();
-u8 move_to_left(u16 step);
-u8 move_to_right(u16 step);
 u8 stretch(u16 step);
 u8 stop_move();
-
-
-
-
+static u8 frame_control_search_start();
+static u8 frame_control_work();
+static u8 frame_control_no_state();
 u8 frame_init(void){
   settings.vars.state = INIT_STATE;
-  settings.vars.init_state = SEARCH_START;
-  settings.vars.frame_finded = 0;
+  settings.vars.frame_number = 0;
   settings.vars.stop_time =0;
   opt_old = 0;
 }
+
+static u8 frame_control_search_start(){
+    if (settings.vars.init_state & STARTED){
+      if (rising_full()){
+        settings.vars.init_state &= ~STARTED;
+        settings.vars.init_state |= START_POSITON;
+        settings.vars.stop_time = 1;
+        time_stoped = uwTick;
+        stop_move();
+        settings.vars.state = WORK_STATE;
+        settings.vars.frame_number = 0;
+      }else if (rising_only_opt(LEFT_PARA)){
+        settings.vars.stop_time = 1;
+        time_stoped = uwTick;
+        move_to_left(MAX_MAIN_STEP,1);
+      }else if(motor_two.step_number==0){
+        settings.vars.state = NO_STATE;
+        settings.vars.init_state &= ~STARTED;
+      }
+    }else{
+      settings.vars.init_state |= STARTED;
+      move_to_left(MAX_MAIN_STEP,1);
+    }
+  
+}
+static u8 frame_control_work(){
+  if (settings.vars.init_state & STARTED){
+    if (rising_full()){
+      if (settings.vars.move_state == MOVE_TO_LEFT){
+        if(motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-60)){
+          settings.vars.init_state |= START_POSITON;
+          settings.vars.frame_number = 0;
+          move_to_right(MAX_MAIN_STEP,1);
+          settings.vars.stop_time = 1;
+          time_stoped = uwTick;
+          settings.vars.state = WORK_STATE;
+        }
+      }else{
+        if(motor_one.step_number<(MAX_MAIN_STEP-STRETCH_STEP-60)){
+          settings.vars.init_state &= ~START_POSITON;
+          move_to_left(MAX_MAIN_STEP,1);
+          settings.vars.stop_time = 1;
+          time_stoped = uwTick;
+          settings.vars.state = WORK_STATE;
+          settings.vars.frame_number_saved = settings.vars.frame_number;
+        }
+      }
+    }else{
+      if (settings.vars.move_state == MOVE_TO_RIGHT){
+        if (settings.vars.init_state & STRETCH){
+          if(motor_one.step_number == 0||rising_only_opt(MIDLE_PARA)){
+            move_to_right(MAX_MAIN_STEP,0);
+            suspend_rotate(&motor_one);
+            suspend_rotate(&motor_two);
+            settings.vars.stop_time = settings.vars.frame[settings.vars.frame_number].time;
+            if (settings.vars.stop_time){
+              enable_led();
+            }else{
+              settings.vars.stop_time = 1;
+            }
+            time_stoped = uwTick;
+            settings.vars.frame_number++;
+          }
+        }else{
+          if (rising_only_opt(LEFT_PARA)&&
+              (motor_one.step_number<(MAX_MAIN_STEP-STRETCH_STEP-60))){
+            stretch(STRETCH_STEP);
+          }else if(motor_one.step_number==0){
+            break_to_init();
+          }
+        }
+      }else{
+        if (settings.vars.init_state & STRETCH){
+          if(motor_one.step_number == 0||rising_only_opt(MIDLE_PARA)){
+            move_to_left(MAX_MAIN_STEP,0);
+            suspend_rotate(&motor_one);
+            suspend_rotate(&motor_two);
+            settings.vars.stop_time = settings.vars.frame[settings.vars.frame_number-1].time;
+            if (settings.vars.stop_time){
+              enable_led();
+            }else{
+              settings.vars.stop_time = 1;
+            }
+            time_stoped = uwTick;
+            settings.vars.frame_number--;
+          }
+        }else{
+          if (rising_only_opt(LEFT_PARA) &&
+              (motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-60))){
+            stretch(STRETCH_STEP);
+          }else if(motor_two.step_number==0){
+            break_to_init();
+          }
+        }
+      }
+    }
+  }else{
+    settings.vars.init_state |= STARTED;
+    move_to_right(MAX_MAIN_STEP,1);
+  }
+  
+}
+static u8 frame_control_no_state(){
+  if (settings.vars.init_state & STARTED){
+    if (settings.vars.move_state == MOVE_TO_LEFT){
+      if (rising_only_opt(LEFT_PARA)){
+        break_to_init();
+        time_stoped = uwTick;
+        stop_move();
+      }else if(motor_two.step_number==0){
+        shift_step =(shift_step>=3600)?200:(shift_step + 400);
+        move_to_right(shift_step,1);
+      }
+    }else if (settings.vars.move_state == MOVE_TO_RIGHT){
+      if (rising_only_opt(MIDLE_PARA)){
+        break_to_init();
+        time_stoped = uwTick;
+        stop_move();
+      }else if(motor_one.step_number==0){
+        shift_step =(shift_step>=3600)?200:(shift_step + 400);
+        move_to_left(shift_step,1);
+      }
+    }
+  }else{
+    settings.vars.init_state |= STARTED;
+    shift_step = 200;
+    move_to_left(shift_step,1);
+  }
+}
 u8 frame_control_hadler(void){
-  static u32 time_stoped;
   opt = get_opt_mask();
   if (!settings.vars.stop_time){
     switch(settings.vars.state){
-        case INIT_STATE:
-          if (settings.vars.init_state & SEARCH_START){
-            if (settings.vars.init_state & STARTED){
-              if (rising_full()){
-                settings.vars.init_state &= ~SEARCH_START;
-                settings.vars.init_state &= ~STARTED;
-                settings.vars.init_state |= CHECK_FRAME;
-                settings.vars.init_state |= START_POSITON;
-                settings.vars.stop_time = 1;
-                time_stoped = uwTick;
-                stop_move();
-                settings.vars.frame_finded = 0;
-              }else if (rising_only_opt(MIDLE_PARA)){
-                settings.vars.stop_time = 1;
-                time_stoped = uwTick;
-                move_to_right(MAX_MAIN_STEP);
-              }else if(motor_one.step_number==0){
-                break_to_init();
-              }
-            }else{
-              if (opt == OPT_FULL_CAPE){//not cool state
-                settings.vars.state = NO_STATE;
-              }else{
-                settings.vars.init_state |= STARTED;
-                move_to_right(MAX_MAIN_STEP);
-              }
-            }
-          }else if (settings.vars.init_state & CHECK_FRAME){
-            if (settings.vars.init_state & STARTED){
-              if (rising_full()&&(motor_two.step_number<(MAX_MAIN_STEP-10))){
-                settings.vars.init_state &= ~CHECK_FRAME;
-                settings.vars.init_state &= ~START_POSITON;
-                settings.vars.init_state &= ~STARTED;
-                settings.vars.stop_time = 1;
-                time_stoped = uwTick;
-                stop_move();
-                settings.vars.state = WORK_STATE;
-                init_frame_struct(settings.vars.frame_finded);
-              }else if (rising_only_opt(MIDLE_PARA)&&(motor_two.step_number<(MAX_MAIN_STEP-10))){
-                settings.vars.stop_time = 1;
-                time_stoped = uwTick;
-                move_to_left(MAX_MAIN_STEP );
-                settings.vars.frame_finded++;
-              }else if(motor_two.step_number==0){
-                break_to_init();
-              }
-            }else{
-              settings.vars.init_state |= STARTED;
-              move_to_left(MAX_MAIN_STEP );
-            }
-          }
-          break;
-        case WORK_STATE:
-            if (settings.vars.init_state & STARTED){
-              if (rising_full()){
-                if ((settings.vars.move_state == MOVE_TO_RIGHT)&&
-                  (motor_one.step_number<(MAX_MAIN_STEP-STRETCH_STEP))){
-                  settings.vars.init_state |= START_POSITON;
-                  settings.vars.frame_finded = 0;
-                  move_to_left(MAX_MAIN_STEP);
-                  settings.vars.stop_time = 1;
-                  time_stoped = uwTick;
-                  settings.vars.state = WORK_STATE;
-                }else if(motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP)){
-                  if (settings.vars.frame_finded != settings.vars.frame_number_saved){
-                    break_to_init();
-                  }else{
-                    settings.vars.init_state &= ~START_POSITON;
-                    move_to_right(MAX_MAIN_STEP);
-                  }
-                  settings.vars.stop_time = 1;
-                  time_stoped = uwTick;
-                  settings.vars.state = WORK_STATE;
-                }
-              }else{
-                if (settings.vars.move_state == MOVE_TO_RIGHT){
-                  if (settings.vars.init_state & STRETCH){
-                    if(motor_two.step_number == 0||rising_only_opt(MIDLE_PARA)){
-                      move_to_right(MAX_MAIN_STEP);
-                      suspend_rotate(&motor_one);
-                      suspend_rotate(&motor_two);
-                      settings.vars.stop_time = settings.vars.frame[settings.vars.frame_finded-1].time;
-                      if (settings.vars.stop_time){
-                        enable_led();
-                      }else{
-                        settings.vars.stop_time = 1;
-                      }
-                      time_stoped = uwTick;
-                      settings.vars.frame_finded--;
-                    }
-                  }else{
-                    if (rising_only_opt(LEFT_PARA)&&
-                        (motor_one.step_number<(MAX_MAIN_STEP-STRETCH_STEP-10))){
-                      stretch(STRETCH_STEP);
-                    }else if(motor_one.step_number==0){
-                      break_to_init();
-                    }
-                  }
-                }else{
-                  if (settings.vars.init_state & STRETCH){
-                    if(motor_one.step_number == 0||rising_only_opt(MIDLE_PARA)){
-                      move_to_left(MAX_MAIN_STEP);
-                      suspend_rotate(&motor_one);
-                      suspend_rotate(&motor_two);
-                      settings.vars.stop_time = settings.vars.frame[settings.vars.frame_finded].time;
-                      if (settings.vars.stop_time){
-                        enable_led();
-                      }else{
-                        settings.vars.stop_time = 1;
-                      }
-                      time_stoped = uwTick;
-                      settings.vars.frame_finded++;
-                    }
-                  }else{
-                    if (rising_only_opt(RIGHT_PARA) &&
-                        (motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-10))){
-                      stretch(STRETCH_STEP);
-                    }else if(motor_two.step_number==0){
-                      break_to_init();
-                    }
-                  }
-                }
-              }
-            }else{
-              settings.vars.init_state |= STARTED;
-              move_to_right(MAX_MAIN_STEP);
-            }
-          break;
-        case(NO_STATE):
-          if (settings.vars.init_state & STARTED){
-            if (rising_only_opt(MIDLE_PARA)){
-              break_to_init();
-              time_stoped = uwTick;
-              stop_move();
-            }else if (settings.vars.move_state == MOVE_TO_LEFT){
-              if(motor_two.step_number==0){
-                
-                shift_step =(shift_step>=1800)?200:(shift_step + 400);
-                move_to_right(shift_step);
-              }
-            }else if (settings.vars.move_state == MOVE_TO_RIGHT){
-              if(motor_one.step_number==0){
-                shift_step =(shift_step>=1800)?200:(shift_step + 400);
-                move_to_left(shift_step);
-              }
-            }
-
-          }else{
-            settings.vars.init_state |= STARTED;
-            shift_step = 200;
-            move_to_left(shift_step);
-          }
-          break;
-        default:
-          settings.vars.state = INIT_STATE;
+    case INIT_STATE:
+      frame_control_search_start();
+      break;
+    case WORK_STATE:
+      frame_control_work();
+      break;
+    case(NO_STATE):
+      frame_control_no_state();
+      break;
+    default:
+      break_to_init();
     }
   }else{
     suspend_rotate(&motor_one);
     suspend_rotate(&motor_two);
     if (uwTick>(time_stoped+settings.vars.stop_time*1000)){
       if (settings.vars.move_state == MOVE_TO_RIGHT){
-        if (settings.vars.frame_finded>0){
-          if(settings.vars.frame[settings.vars.frame_finded-1].option & ENABLE_LED){
+        if (settings.vars.frame_number>0){
+          if(settings.vars.frame[settings.vars.frame_number-1].option & ENABLE_LED){
           }else{
             disable_led();
           }
         }else{
-          if(settings.vars.frame[settings.vars.frame_finded].option & ENABLE_LED){
+          if(settings.vars.frame[settings.vars.frame_number].option & ENABLE_LED){
           }else{
             disable_led();
           }
         }
       }else{
-        if(settings.vars.frame[settings.vars.frame_finded].option & ENABLE_LED){
+        if(settings.vars.frame[settings.vars.frame_number].option & ENABLE_LED){
         }else{
           disable_led();
         }
@@ -228,33 +208,33 @@ u8 frame_control_hadler(void){
 }
 u8 break_to_init(){
   settings.vars.state = INIT_STATE;
-  settings.vars.init_state |= SEARCH_START;
   settings.vars.init_state &= ~STARTED;
   settings.vars.stop_time = 1;
 }
-u8 move_to_left(u16 step){
+u8 move_to_left(u16 step,u8 with_stop){
   settings.vars.init_state &= ~STRETCH;
   settings.vars.move_state = MOVE_TO_LEFT;
-  stop_rotate(&motor_one);
+  if(with_stop){
+    stop_rotate(&motor_one);
+  }
+  motor_one.step_number =0;
   start_rotate(1,step,&motor_two);
 }
-u8 move_to_right(u16 step){
+u8 move_to_right(u16 step,u8 with_stop){
   settings.vars.init_state &= ~STRETCH;
   settings.vars.move_state = MOVE_TO_RIGHT;
-  stop_rotate(&motor_two);
+  if(with_stop){
+    stop_rotate(&motor_two);
+  }
+  motor_two.step_number =0;
   start_rotate(0,step,&motor_one);
 }
 u8 stretch(u16 step){
   settings.vars.init_state |= STRETCH;
-  if (settings.vars.move_state == MOVE_TO_RIGHT){
-    stop_rotate(&motor_one);
-    suspend_rotate(&motor_one);
-    start_rotate(1,step,&motor_two);
-  }else{
-    stop_rotate(&motor_two);
-    suspend_rotate(&motor_two);
-    start_rotate(0,step,&motor_one);
-  }
+  stop_rotate(&motor_two);
+  motor_two.step_number = 0;
+  suspend_rotate(&motor_two);
+  start_rotate(0,step,&motor_one);
 }
 u8 stop_move(){
   settings.vars.init_state &= ~STRETCH;
@@ -267,43 +247,15 @@ u8 stop_move(){
 u8 rising_only_opt(u8 para_number){
   u8 para_inverse;
   para_inverse = ~para_number;
-  para_inverse &= 0x07;
+  para_inverse &= 0x03;
   if ((opt&para_number)&&((opt_old&para_number)==0)&&((opt&para_inverse))==0){
     return 1;
   }else{
     return 0;
   }
 }  
-u8 rising_midle_opt_after_left(){
-  if ((opt&0x02)&&((opt_old&0x02)==0)&&(opt&0x01)){
-    return 1;
-  }else{
-    return 0;
-  }
-}  
-u8 rising_midle_opt_after_right(){
-  if ((opt&0x02)&&((opt_old&0x02)==0)&&(opt&0x04)){
-    return 1;
-  }else{
-    return 0;
-  }
-}  
-u8 rising_left_after_two_right(){
-  if ((opt&0x01)&&((opt_old&0x01)==0)&&(opt&0x02)&&(opt&0x04)){
-    return 1;
-  }else{
-    return 0;
-  }
-}  
-u8 rising_right_after_two_left(){
-  if ((opt&0x04)&&((opt_old&0x04)==0)&&(opt&0x02)&&(opt&0x01)){
-    return 1;
-  }else{
-    return 0;
-  }
-}  
 u8 rising_full(){
-  if(rising_right_after_two_left()||rising_left_after_two_right()){
+  if((opt!=opt_old)&&(opt==0x03)){
     return 1;
   }else{
     return 0;
@@ -321,20 +273,20 @@ u8 disable_led(){
 u8 get_opt_mask(){
   u8 opt_state;
   opt_state =0;
-  if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_5)){
+  if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_6)){
+    settings.vars.init_state |= DID_LEFT_OPT;
+    time_for_state_memory_left = STEP_FOR_MEMORY_STATE;
     opt_state |=0x01;
   }else{
     opt_state &=~0x01;
   }
-  if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_6)){
+  if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_5)){
+    settings.vars.init_state |= DID_MIDLE_OPT;
+    time_for_state_memory_midle =STEP_FOR_MEMORY_STATE;    
     opt_state |=0x02;
   }else{
     opt_state &=~0x02;
   }
-  if(HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_7)){
-    opt_state |=0x04;
-  }else{
-    opt_state &=~0x04;
-  }
+
   return opt_state;
 }

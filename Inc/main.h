@@ -63,6 +63,8 @@ typedef unsigned int u32;
 typedef unsigned short u16;
 typedef unsigned char u8;
 typedef unsigned const char uc8;
+extern u16 time_for_state_memory_left;
+extern u16 time_for_state_memory_midle;
 extern u32 time_ms;
 typedef struct __attribute__((packed)){
   u8 hour;
@@ -89,7 +91,9 @@ typedef union{
 #define STARTED  BIT(3)
 #define END_POSITON  BIT(4)
 #define STRETCH      BIT(5)
-    u16 frame_finded;
+#define DID_MIDLE_OPT      BIT(6)
+#define DID_LEFT_OPT      BIT(7)    
+    u16 frame_number;
     u16 stop_time;  //current time in sec
     u8 usb_tranceiver_state;
 #define USB_RECIVE_OR_TRANSMIT_PACKET BIT(0)  //set in irq when receive or transmith data

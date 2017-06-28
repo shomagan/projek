@@ -18,13 +18,6 @@
 #include "usb_desc.h"
 
 
-
-
-/* USER CODE BEGIN Includes */
-
-/* USER CODE END Includes */
-
-/* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc2;
 
 IWDG_HandleTypeDef hiwdg;
@@ -35,8 +28,6 @@ TIM_HandleTypeDef htim1;
 
 UART_HandleTypeDef huart1;
 
-/* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
 u32 time_ms;
 u8 config;
 RTC_TimeTypeDef Time;
@@ -45,10 +36,6 @@ settings_t settings;
 u8 buff_temp[256];
 u32 lenta;
 u32 speed_control;
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void Error_Handler(void);
 static void MX_GPIO_Init(void);
@@ -60,30 +47,19 @@ static void MX_USART1_UART_Init(void);
 static u8 work_time(void);
 
 void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
-                                
-
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
-
-/* USER CODE END PFP */
-
-/* USER CODE BEGIN 0 */
 extern  uint8_t Receive_Buffer[64];
 extern  uint32_t Receive_length ;
 extern  uint32_t length ;
 uint8_t Send_Buffer[64];
 uint32_t packet_sent=1;
 uint32_t packet_receive=1;
+u16 time_for_state_memory_left;
+u16 time_for_state_memory_midle;
 
 
 /* USER CODE END 0 */
 
-int main(void)
-{
-
-  /* USER CODE BEGIN 1 */
-  /* USER CODE END 1 */
-
+int main(void){
   /* MCU Configuration----------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -104,12 +80,6 @@ int main(void)
   MX_USART1_UART_Init();
   init_frame_struct(0);
 
-  /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   HAL_GPIO_WritePin(GPIOA,BIT(5),GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOA,BIT(4),GPIO_PIN_SET);
   HAL_GPIO_WritePin(GPIOB,BIT(0),GPIO_PIN_SET);
@@ -127,13 +97,24 @@ int main(void)
   lenta = 1;
   while (1){
     HAL_IWDG_Refresh(&hiwdg);
-    if (settings.vars.state!=STOPED_TIME){
-      frame_control_hadler();
-    }
     if (config & STEP_TIME){
       config &=~STEP_TIME;
+      if (settings.vars.state!=STOPED_TIME){
+        frame_control_hadler();
+      }
       step_motor_control(&motor_one);
       step_motor_control(&motor_two);
+      if(time_for_state_memory_left){
+        time_for_state_memory_left--;
+      }else{
+        settings.vars.init_state &= ~DID_LEFT_OPT;
+      }
+      if(time_for_state_memory_midle){
+        time_for_state_memory_midle--;
+      }else{
+        settings.vars.init_state &= ~DID_MIDLE_OPT;
+      }
+
     }
 
     if(uwTick>(timer+1000)){
@@ -168,7 +149,6 @@ int main(void)
         break_to_init();
       }
     }
-    
     HAL_RTC_GetTime(&hrtc, &Time, RTC_FORMAT_BCD);
     HAL_RTC_GetDate(&hrtc, &Date, RTC_FORMAT_BCD);
   }
