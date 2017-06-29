@@ -61,23 +61,22 @@ static u8 frame_control_work(){
   if (settings.vars.init_state & STARTED){
     if (rising_full()){
       if (settings.vars.move_state == MOVE_TO_LEFT){
-        if(motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-60)){
-          settings.vars.init_state |= START_POSITON;
-          settings.vars.frame_number = 0;
-          move_to_right(MAX_MAIN_STEP,1);
-          settings.vars.stop_time = 1;
-          time_stoped = uwTick;
-          settings.vars.state = WORK_STATE;
-        }
+        settings.vars.init_state |= START_POSITON;
+        settings.vars.frame_number = 0;
+        move_to_right(MAX_MAIN_STEP,1);
+        settings.vars.stop_time = 1;
+        time_stoped = uwTick;
+        settings.vars.state = WORK_STATE;
       }else{
-        if(motor_one.step_number<(MAX_MAIN_STEP-STRETCH_STEP-60)){
-          settings.vars.init_state &= ~START_POSITON;
-          move_to_left(MAX_MAIN_STEP,1);
-          settings.vars.stop_time = 1;
-          time_stoped = uwTick;
-          settings.vars.state = WORK_STATE;
-          settings.vars.frame_number_saved = settings.vars.frame_number;
+        settings.vars.init_state &= ~START_POSITON;
+        move_to_left(MAX_MAIN_STEP,1);
+        settings.vars.stop_time = 1;
+        time_stoped = uwTick;
+        settings.vars.state = WORK_STATE;
+        if(settings.vars.frame_number){
+          settings.vars.frame_number--;
         }
+        settings.vars.frame_number_saved = settings.vars.frame_number;
       }
     }else{
       if (settings.vars.move_state == MOVE_TO_RIGHT){
@@ -100,7 +99,9 @@ static u8 frame_control_work(){
               (motor_one.step_number<(MAX_MAIN_STEP-STRETCH_STEP-60))){
             stretch(STRETCH_STEP);
           }else if(motor_one.step_number==0){
-            break_to_init();
+            settings.vars.state = NO_STATE;
+            settings.vars.init_state &= ~STARTED;
+            settings.vars.stop_time = 1;
           }
         }
       }else{
@@ -109,21 +110,23 @@ static u8 frame_control_work(){
             move_to_left(MAX_MAIN_STEP,0);
             suspend_rotate(&motor_one);
             suspend_rotate(&motor_two);
-            settings.vars.stop_time = settings.vars.frame[settings.vars.frame_number-1].time;
+            settings.vars.frame_number--;
+            settings.vars.stop_time = settings.vars.frame[settings.vars.frame_number].time;
             if (settings.vars.stop_time){
               enable_led();
             }else{
               settings.vars.stop_time = 1;
             }
             time_stoped = uwTick;
-            settings.vars.frame_number--;
           }
         }else{
           if (rising_only_opt(LEFT_PARA) &&
               (motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-60))){
             stretch(STRETCH_STEP);
           }else if(motor_two.step_number==0){
-            break_to_init();
+            settings.vars.state = NO_STATE;
+            settings.vars.init_state &= ~STARTED;
+            settings.vars.stop_time = 1;
           }
         }
       }
@@ -175,7 +178,10 @@ u8 frame_control_hadler(void){
       frame_control_no_state();
       break;
     default:
-      break_to_init();
+      settings.vars.state = NO_STATE;
+      settings.vars.init_state &= ~STARTED;
+      settings.vars.stop_time = 1;
+
     }
   }else{
     suspend_rotate(&motor_one);
