@@ -183,7 +183,7 @@ void SysTick_Handler(void){
   if(settings.vars.init_state & STRETCH){
     step_count = 10;
   }else{
-    step_count = 3;
+    step_count = 1;
   }
     
   if (uwTick>(speed_control+step_count)){

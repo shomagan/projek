@@ -25,6 +25,7 @@ u8 start_rotate(u8 rotate_vector,u32 step_number,motor_template* motor){
   HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_sleep),GPIO_PIN_SET);
   motor->tick_from_start =0;
   if (rotate_vector <= 2){
+    motor->awaik =1;
     motor->dir_state = rotate_vector;
     if (rotate_vector){
       HAL_GPIO_WritePin(motor->gpio,BIT(motor->pin_dir),GPIO_PIN_RESET);

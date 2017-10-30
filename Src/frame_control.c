@@ -26,11 +26,14 @@ u8 stop_move();
 static u8 frame_control_search_start();
 static u8 frame_control_work();
 static u8 frame_control_no_state();
+static u8 move_to_left_both(u16 step);
+static u8 move_to_right_both(u16 step);
 u8 frame_init(void){
   settings.vars.state = INIT_STATE;
   settings.vars.frame_number = 0;
   settings.vars.stop_time =0;
   opt_old = 0;
+  return 1;
 }
 
 static u8 frame_control_search_start(){
@@ -55,9 +58,10 @@ static u8 frame_control_search_start(){
       settings.vars.init_state |= STARTED;
       move_to_left(MAX_MAIN_STEP,1);
     }
-  
+  return 1;
 }
 static u8 frame_control_work(){
+  static u8 centrofication;
   if (settings.vars.init_state & STARTED){
     if (rising_full()){
       if (settings.vars.move_state == MOVE_TO_LEFT){
@@ -81,7 +85,8 @@ static u8 frame_control_work(){
     }else{
       if (settings.vars.move_state == MOVE_TO_RIGHT){
         if (settings.vars.init_state & STRETCH){
-          if(motor_one.step_number == 0||rising_only_opt(MIDLE_PARA)){
+          if(rising_only_opt(MIDLE_PARA)){
+            centrofication =0;
             move_to_right(MAX_MAIN_STEP,0);
             suspend_rotate(&motor_one);
             suspend_rotate(&motor_two);
@@ -93,10 +98,21 @@ static u8 frame_control_work(){
             }
             time_stoped = uwTick;
             settings.vars.frame_number++;
+          }else if(motor_one.step_number == 0){
+            if(centrofication==0){
+              centrofication=1;
+              move_to_left_both(STRETCH_STEP*3);
+            }else{
+              centrofication=0;
+              settings.vars.state = NO_STATE;
+              settings.vars.init_state &= ~STARTED;
+              settings.vars.stop_time = 1;
+            }
           }
         }else{
           if (rising_only_opt(LEFT_PARA)&&
               (motor_one.step_number<(MAX_MAIN_STEP-STRETCH_STEP-60))){
+            centrofication =0;
             stretch(STRETCH_STEP);
           }else if(motor_one.step_number==0){
             settings.vars.state = NO_STATE;
@@ -106,7 +122,7 @@ static u8 frame_control_work(){
         }
       }else{
         if (settings.vars.init_state & STRETCH){
-          if(motor_one.step_number == 0||rising_only_opt(MIDLE_PARA)){
+          if(rising_only_opt(MIDLE_PARA)){
             move_to_left(MAX_MAIN_STEP,0);
             suspend_rotate(&motor_one);
             suspend_rotate(&motor_two);
@@ -118,10 +134,21 @@ static u8 frame_control_work(){
               settings.vars.stop_time = 1;
             }
             time_stoped = uwTick;
+          }else if(motor_one.step_number == 0){
+            if(centrofication==0){
+              centrofication=1;
+              move_to_left_both(STRETCH_STEP*3);
+            }else{
+              centrofication=0;
+              settings.vars.state = NO_STATE;
+              settings.vars.init_state &= ~STARTED;
+              settings.vars.stop_time = 1;
+            }
           }
         }else{
           if (rising_only_opt(LEFT_PARA) &&
               (motor_two.step_number<(MAX_MAIN_STEP-STRETCH_STEP-60))){
+            centrofication =0;
             stretch(STRETCH_STEP);
           }else if(motor_two.step_number==0){
             settings.vars.state = NO_STATE;
@@ -135,7 +162,7 @@ static u8 frame_control_work(){
     settings.vars.init_state |= STARTED;
     move_to_right(MAX_MAIN_STEP,1);
   }
-  
+  return 1;
 }
 static u8 frame_control_no_state(){
   if (settings.vars.init_state & STARTED){
@@ -163,6 +190,7 @@ static u8 frame_control_no_state(){
     shift_step = 200;
     move_to_left(shift_step,1);
   }
+  return 1;
 }
 u8 frame_control_hadler(void){
   opt = get_opt_mask();
@@ -181,7 +209,6 @@ u8 frame_control_hadler(void){
       settings.vars.state = NO_STATE;
       settings.vars.init_state &= ~STARTED;
       settings.vars.stop_time = 1;
-
     }
   }else{
     suspend_rotate(&motor_one);
@@ -211,11 +238,13 @@ u8 frame_control_hadler(void){
     }
   }
   opt_old = opt;
+  return 1;
 }
 u8 break_to_init(){
   settings.vars.state = INIT_STATE;
   settings.vars.init_state &= ~STARTED;
   settings.vars.stop_time = 1;
+  return 1;
 }
 u8 move_to_left(u16 step,u8 with_stop){
   settings.vars.init_state &= ~STRETCH;
@@ -225,6 +254,7 @@ u8 move_to_left(u16 step,u8 with_stop){
   }
   motor_one.step_number =0;
   start_rotate(1,step,&motor_two);
+  return 1;
 }
 u8 move_to_right(u16 step,u8 with_stop){
   settings.vars.init_state &= ~STRETCH;
@@ -234,19 +264,33 @@ u8 move_to_right(u16 step,u8 with_stop){
   }
   motor_two.step_number =0;
   start_rotate(0,step,&motor_one);
+  return 1;
 }
+u8 move_to_left_both(u16 step){
+  start_rotate(0,step,&motor_two);
+  start_rotate(0,step,&motor_one);
+  return 1;
+}
+u8 move_to_right_both(u16 step){
+  start_rotate(1,step,&motor_one);
+  start_rotate(1,step,&motor_two);
+  return 1;
+}
+
 u8 stretch(u16 step){
   settings.vars.init_state |= STRETCH;
   stop_rotate(&motor_two);
   motor_two.step_number = 0;
   suspend_rotate(&motor_two);
   start_rotate(0,step,&motor_one);
+  return 1;
 }
 u8 stop_move(){
   settings.vars.init_state &= ~STRETCH;
   settings.vars.move_state = STOPED;
   stop_rotate(&motor_two);
   stop_rotate(&motor_one);
+  return 1;
 }
 
 
